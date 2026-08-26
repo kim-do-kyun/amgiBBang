@@ -447,24 +447,40 @@ function bootingHTML(){
     <div class="brand" style="justify-content:center;font-size:20px"><span class="dot"></span>amgiBBang</div>
     <p style="color:var(--muted);margin-top:14px">불러오는 중…</p></div></div>`;
 }
+let gateMode="magic", gateEmailVal="";
 function gateHTML(){
+  const pwMode = gateMode==="password";
   return `<div class="gate"><div class="gate-card fade">
     <div class="gate-logo">🍞</div>
     <h1>amgiBBang <span>암기빵</span></h1>
     <p class="gate-sub">엑셀·PDF로 나만의 단어·문제를 만들어 4지선다로 외우는 학습앱.<br>로그인하면 폰·패드·PC 어디서든 <b>내 데이터</b>가 동기화돼요.</p>
     <div class="gate-form">
-      <input type="text" id="gateEmail" inputmode="email" autocomplete="email" placeholder="you@example.com">
-      <button class="btn primary" id="gateSend">매직링크로 로그인</button>
+      <input type="text" id="gateEmail" inputmode="email" autocomplete="email" placeholder="you@example.com" value="${esc(gateEmailVal)}">
+      ${pwMode?`<input type="password" id="gatePw" autocomplete="current-password" placeholder="비밀번호">`:``}
+      <button class="btn primary" id="gateSend">${pwMode?"비밀번호로 로그인":"매직링크로 로그인"}</button>
     </div>
-    <div class="parsebox idle" id="gateMsg">가입 절차 없이, 메일 링크를 누르면 자동으로 계정이 생성됩니다.</div>
+    <div class="parsebox idle" id="gateMsg">${pwMode?"비밀번호를 설정한 계정만 사용할 수 있어요. 처음이면 매직링크로 로그인 후, 계정 메뉴에서 비밀번호를 설정하세요.":"가입 절차 없이, 메일 링크를 누르면 자동으로 계정이 생성됩니다."}</div>
+    <div style="margin-top:14px"><a class="link" id="gateToggle">${pwMode?"매직링크로 로그인":"비밀번호로 로그인"}</a></div>
   </div></div>`;
 }
 function wireGate(){
+  const emailEl=$("#gateEmail");
+  const captureEmail=()=>{ if(emailEl) gateEmailVal=emailEl.value; };
+  const toggle=$("#gateToggle"); if(toggle) toggle.onclick=()=>{ captureEmail(); gateMode = gateMode==="password"?"magic":"password"; render(); };
   const send=async()=>{
     const email=($("#gateEmail").value||"").trim();
     if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return toast("올바른 이메일을 입력하세요");
     if(!sb) return toast("연결이 아직 준비되지 않았어요");
     const btn=$("#gateSend"), msg=$("#gateMsg");
+    if(gateMode==="password"){
+      const pw=($("#gatePw").value||"");
+      if(pw.length<6) return toast("비밀번호를 입력하세요 (6자 이상)");
+      btn.disabled=true; btn.textContent="로그인 중…";
+      const { error }=await sb.auth.signInWithPassword({ email, password:pw });
+      if(error){ msg.className="parsebox warn"; msg.textContent="로그인 실패 — 이메일/비밀번호를 확인하세요 (비밀번호 미설정이면 매직링크로)"; btn.disabled=false; btn.textContent="비밀번호로 로그인"; }
+      // success → onAuthStateChange takes over
+      return;
+    }
     btn.disabled=true; btn.textContent="보내는 중…";
     const redirect=(location.protocol==="http:"||location.protocol==="https:")?location.origin+location.pathname:location.href;
     const { error }=await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: redirect } });
@@ -472,7 +488,8 @@ function wireGate(){
     else { msg.className="parsebox ok"; msg.innerHTML="✓ <b>"+esc(email)+"</b> 로 링크를 보냈어요. 메일함(스팸함 포함)에서 링크를 누르면 로그인됩니다."; btn.textContent="전송됨 ✓"; }
   };
   const b=$("#gateSend"); if(b) b.onclick=send;
-  const inp=$("#gateEmail"); if(inp){ inp.focus(); inp.addEventListener("keydown",e=>{ if(e.key==="Enter"){e.preventDefault();send();} }); }
+  ["gateEmail","gatePw"].forEach(id=>{ const el=$("#"+id); if(el) el.addEventListener("keydown",e=>{ if(e.key==="Enter"){e.preventDefault();send();} }); });
+  if(emailEl){ emailEl.addEventListener("input",captureEmail); if(!gateEmailVal) emailEl.focus(); else ($("#gatePw")||emailEl).focus(); }
 }
 
 function renderCrumb(){
@@ -698,9 +715,9 @@ function renameDeck(id){
 }
 
 /* ================= CREATE DECK (upload / paste) ================= */
-let deckDraft = {type:"vocab", method:"paste", items:[]};
+let deckDraft = {type:"vocab", method:"paste", items:[], chunk:0};
 function deckModal(){
-  deckDraft={type:"vocab",method:"paste",items:[]};
+  deckDraft={type:"vocab",method:"paste",items:[],chunk:0};
   openModal(`
    <header><h3>새 학습 세트</h3>${closeX()}</header>
    <div class="body">
@@ -718,11 +735,21 @@ function deckModal(){
      </div>
      <div id="methBody"></div>
      <div class="parsebox idle" id="pbox">아래에 입력하면 자동으로 인식됩니다.</div>
+     <div class="field" id="chunkField" style="margin-top:14px;margin-bottom:0">
+       <label class="check"><input type="checkbox" id="chunkOn"> 여러 회차로 나누기 <span style="font-weight:400;color:var(--muted)">— 큰 파일을 N개씩 쪼개요</span></label>
+       <div id="chunkOpts" class="hide" style="margin-top:9px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+         <input type="text" id="chunkSize" inputmode="numeric" value="50" style="width:78px;text-align:center">
+         <span style="color:var(--muted);font-size:13px">개씩</span>
+         <span id="chunkHint" class="mono" style="color:var(--accent-ink);font-size:12px;font-weight:700"></span>
+       </div>
+     </div>
    </div>
    <div class="foot">
      <button class="btn ghost" data-close>취소</button>
      <button class="btn primary" id="dCreate" disabled>세트 만들기</button>
    </div>`);
+  $("#chunkOn").addEventListener("change",()=>{ $("#chunkOpts").classList.toggle("hide",!$("#chunkOn").checked); updateChunkHint(); });
+  $("#chunkSize").addEventListener("input",updateChunkHint);
   $("#typeSeg").addEventListener("click",e=>{
     const b=e.target.closest("[data-type]"); if(!b)return;
     deckDraft.type=b.dataset.type;
@@ -927,6 +954,15 @@ function updateParseBox(items){
           : ` &nbsp;·&nbsp; 정답 포함됨`);
   }
   if(btn) btn.disabled=false;
+  updateChunkHint();
+}
+function updateChunkHint(){
+  const onEl=$("#chunkOn"); const on=onEl&&onEl.checked;
+  const sizeEl=$("#chunkSize"); const size=on? Math.max(1, parseInt((sizeEl&&sizeEl.value)||"0",10)||0):0;
+  deckDraft.chunk = on? size : 0;
+  const hint=$("#chunkHint"); if(!hint) return;
+  const n=(deckDraft.items||[]).length;
+  hint.textContent = (on && size>0 && n>0) ? `총 ${n}개 → ${Math.ceil(n/size)}회차` : "";
 }
 
 async function onFile(e){
@@ -976,8 +1012,22 @@ function createDeck(){
 function finalizeDeck(name,items){
   const cat=findCat(route.catId); if(!cat)return;
   items.forEach(it=>{ delete it.__guessed; });
-  cat.decks.push({id:uid(),name,type:deckDraft.type,created:Date.now(),items,fav:[],wrong:[],best:null});
-  save(); closeModal(); render(); toast("세트가 추가됐어요 ✓");
+  const type=deckDraft.type;
+  const mkDeck=(nm,its)=>({id:uid(),name:nm,type,created:Date.now(),items:its,fav:[],wrong:[],best:null});
+  const size=deckDraft.chunk|0;
+  if(size>0 && items.length>size){
+    // split into rounds of `size`
+    const slices=[]; for(let i=0;i<items.length;i+=size) slices.push(items.slice(i,i+size));
+    // vocab needs ≥4 per deck for a 4-choice quiz → merge a too-small last round
+    if(type==="vocab" && slices.length>1 && slices[slices.length-1].length<4){
+      const last=slices.pop(); slices[slices.length-1]=slices[slices.length-1].concat(last);
+    }
+    slices.forEach((s,i)=>cat.decks.push(mkDeck(`${name} · ${i+1}회차`, s)));
+    save(); closeModal(); render(); toast(`${slices.length}개 회차로 나눠 추가됐어요 ✓`);
+  }else{
+    cat.decks.push(mkDeck(name, items));
+    save(); closeModal(); render(); toast("세트가 추가됐어요 ✓");
+  }
 }
 
 /* ---- answer editor: set the correct choice per question ---- */
@@ -1484,11 +1534,33 @@ function acctMenu(){
     </div>
     <div class="foot">
       <button class="btn ghost" data-close>닫기</button>
+      <button class="btn" id="setPw">비밀번호 설정</button>
       <button class="btn" id="syncNow">지금 동기화</button>
       <button class="btn danger" id="logoutBtn" style="border-color:var(--bad);color:var(--bad)">로그아웃</button>
     </div>`);
+  $("#setPw").onclick=()=>{ closeModal(); setPasswordModal(); };
   $("#syncNow").onclick=async()=>{ closeModal(); try{ await pushAll(); toast("동기화됨 ✓"); }catch(e){ toast("동기화 실패"); } };
   $("#logoutBtn").onclick=async()=>{ closeModal(); try{ await sb.auth.signOut(); }catch(e){} };
+}
+function setPasswordModal(){
+  openModal(`<header><h3>비밀번호 설정</h3>${closeX()}</header>
+    <div class="body">
+      <p style="color:var(--muted);font-size:13px;margin:-2px 0 14px">비밀번호를 정해두면 다른 기기에서도 <b>매직링크 없이</b> 이메일 + 비밀번호로 바로 로그인할 수 있어요.</p>
+      <div class="field"><label>새 비밀번호 <span style="font-weight:400;color:var(--muted)">(6자 이상)</span></label>
+        <input type="password" id="npw" autocomplete="new-password" placeholder="••••••"></div>
+      <div class="parsebox idle" id="pwMsg">이 비밀번호는 이 계정에만 저장돼요.</div>
+    </div>
+    <div class="foot"><button class="btn ghost" data-close>취소</button><button class="btn primary" id="pwSave">저장</button></div>`);
+  $("#pwSave").onclick=async()=>{
+    const pw=$("#npw").value||""; const msg=$("#pwMsg");
+    if(pw.length<6){ msg.className="parsebox warn"; msg.textContent="6자 이상 입력하세요"; return; }
+    const btn=$("#pwSave"); btn.disabled=true; btn.textContent="저장 중…";
+    try{
+      const { error }=await sb.auth.updateUser({ password:pw });
+      if(error) throw error;
+      msg.className="parsebox ok"; msg.textContent="✓ 설정 완료 — 이제 이메일 + 비밀번호로 로그인할 수 있어요."; btn.textContent="완료"; toast("비밀번호 설정됨 ✓");
+    }catch(e){ msg.className="parsebox warn"; msg.textContent="실패: "+(e&&e.message||e); btn.disabled=false; btn.textContent="저장"; }
+  };
 }
 
 /* ---- pull: rebuild in-memory DB from server rows ---- */
