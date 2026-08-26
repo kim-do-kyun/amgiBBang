@@ -246,6 +246,50 @@ input:focus,textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 
 .ae-choice.sel{border-color:var(--good);background:var(--good-soft);color:var(--good)}
 .ae-choice.sel .idx{background:var(--good);color:#fff;border-color:var(--good)}
 
+/* ---------- login gate ---------- */
+.gate{min-height:calc(100vh - 120px);display:flex;align-items:center;justify-content:center;padding:20px 0 48px}
+.gate-card{width:100%;max-width:420px;text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);padding:38px 30px}
+.gate-logo{font-size:52px;line-height:1}
+.gate-card h1{font-size:27px;margin-top:12px;letter-spacing:-.02em}
+.gate-card h1 span{color:var(--muted);font-weight:700;font-size:18px}
+.gate-sub{color:var(--muted);font-size:14px;line-height:1.6;margin:12px 0 22px}
+.gate-form{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.gate-form input{width:100%;padding:13px 14px;text-align:center;font-size:15px}
+.gate-form .btn{width:100%;justify-content:center;padding:13px}
+
+/* ---------- my page (stats) ---------- */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:4px}
+.stat-tile{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow)}
+.stat-tile .sv{font-size:26px;font-weight:900;letter-spacing:-.02em}
+.stat-tile .sl{color:var(--muted);font-size:13px;font-weight:700;margin-top:2px}
+.stat-tile .ss{color:var(--faint);font-size:11px;margin-top:4px}
+.stat-list{display:flex;flex-direction:column;gap:8px}
+.stat-row{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 14px;box-shadow:var(--shadow)}
+.sr-emoji{flex:none;font-size:20px}
+.sr-info{flex:1;min-width:0;display:flex;flex-direction:column}
+.sr-info b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sr-sub{color:var(--muted);font-size:12px;margin-top:2px}
+.sr-bar{flex:none;width:72px}
+.sr-bar .t{height:6px;border-radius:99px;background:var(--line);overflow:hidden}
+.sr-bar .t i{display:block;height:100%;background:var(--good);border-radius:99px}
+.sr-pct{flex:none;font-size:13px;font-weight:800;min-width:38px;text-align:right}
+.sr-pct.g{color:var(--good)} .sr-pct.r{color:var(--bad)}
+.me-empty{color:var(--muted);text-align:center;padding:22px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;font-size:13px}
+
+/* ---------- emoji picker ---------- */
+.emoji-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.emoji-preview{font-size:24px;width:44px;height:44px;display:grid;place-items:center;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;flex:none}
+.emoji-head input{flex:1}
+.emoji-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(38px,1fr));gap:6px;max-height:180px;overflow:auto;padding:6px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2)}
+.emoji-opt{font-size:22px;height:40px;border-radius:8px;display:grid;place-items:center;background:transparent}
+.emoji-opt:hover{background:var(--panel)}
+.emoji-opt.sel{background:var(--accent-soft);box-shadow:inset 0 0 0 2px var(--accent)}
+
+/* labeled exit button in the quiz player */
+.quit-btn{width:auto;display:inline-flex;align-items:center;padding:0 12px 0 10px;gap:6px;border:1px solid var(--line);background:var(--panel)}
+.quit-btn span{font-size:13px;font-weight:700}
+.quit-btn:hover{border-color:var(--bad);color:var(--bad)}
+
 /* ---------- quit confirm (inside player) ---------- */
 .p-confirm{position:absolute;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;padding:24px;background:color-mix(in srgb,var(--bg) 68%,transparent);backdrop-filter:blur(6px)}
 .p-confirm-card{width:100%;max-width:360px;background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow-lg);padding:26px 24px;text-align:center}
@@ -276,6 +320,9 @@ input:focus,textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 
   <div class="wrap row">
     <div id="crumb"></div>
     <div class="spacer"></div>
+    <button class="icon-btn hide" id="meBtn" title="마이페이지" aria-label="마이페이지">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 1 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>
+    </button>
     <div id="authBox" class="authbox"></div>
     <button class="icon-btn" id="themeBtn" title="테마 전환" aria-label="테마 전환">
       <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
@@ -372,7 +419,9 @@ function load(){ try{const r=localStorage.getItem(LS_KEY);if(r)return JSON.parse
 function persistLocal(){ try{localStorage.setItem(LS_KEY,JSON.stringify(DB));}catch(e){ toast("저장 공간이 가득 찼어요"); } }
 // save() = local cache write + (if signed in) debounced cloud sync
 function save(){ persistLocal(); scheduleSync(); }
-DB = load() || seedDB();
+// each account is its own space — start empty, no shared sample/dummy data.
+// (seedDB() is kept above only as an optional "load samples" source, not auto-used.)
+DB = load() || {cats:[]};
 
 /* ---------------- routing / state ---------------- */
 let route = {view:"home", catId:null, deckId:null};
@@ -383,11 +432,47 @@ function go(r){ route = Object.assign({}, route, r); render(); }
 
 /* ================= RENDER ================= */
 function render(){
-  renderCrumb();
   const v=$("#view");
-  if(route.view==="home") v.innerHTML=homeHTML();
-  else if(route.view==="cat") v.innerHTML=catHTML();
+  // auth gate: must sign in before entering (skipped only if Supabase can't load → offline local mode)
+  if(!authReady){ renderCrumb(); v.innerHTML=bootingHTML(); renderAuth(); return; }
+  if(sb && !session){ renderCrumb(); v.innerHTML=gateHTML(); wireGate(); renderAuth(); return; }
+  renderCrumb();
+  if(route.view==="cat") v.innerHTML=catHTML();
+  else if(route.view==="me") v.innerHTML=meHTML();
+  else v.innerHTML=homeHTML();
   v.classList.remove("fade"); void v.offsetWidth; v.classList.add("fade");
+}
+function bootingHTML(){
+  return `<div class="gate"><div class="gate-card">
+    <div class="brand" style="justify-content:center;font-size:20px"><span class="dot"></span>amgiBBang</div>
+    <p style="color:var(--muted);margin-top:14px">불러오는 중…</p></div></div>`;
+}
+function gateHTML(){
+  return `<div class="gate"><div class="gate-card fade">
+    <div class="gate-logo">🍞</div>
+    <h1>amgiBBang <span>암기빵</span></h1>
+    <p class="gate-sub">엑셀·PDF로 나만의 단어·문제를 만들어 4지선다로 외우는 학습앱.<br>로그인하면 폰·패드·PC 어디서든 <b>내 데이터</b>가 동기화돼요.</p>
+    <div class="gate-form">
+      <input type="text" id="gateEmail" inputmode="email" autocomplete="email" placeholder="you@example.com">
+      <button class="btn primary" id="gateSend">매직링크로 로그인</button>
+    </div>
+    <div class="parsebox idle" id="gateMsg">가입 절차 없이, 메일 링크를 누르면 자동으로 계정이 생성됩니다.</div>
+  </div></div>`;
+}
+function wireGate(){
+  const send=async()=>{
+    const email=($("#gateEmail").value||"").trim();
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return toast("올바른 이메일을 입력하세요");
+    if(!sb) return toast("연결이 아직 준비되지 않았어요");
+    const btn=$("#gateSend"), msg=$("#gateMsg");
+    btn.disabled=true; btn.textContent="보내는 중…";
+    const redirect=(location.protocol==="http:"||location.protocol==="https:")?location.origin+location.pathname:location.href;
+    const { error }=await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: redirect } });
+    if(error){ msg.className="parsebox warn"; msg.textContent="전송 실패: "+error.message; btn.disabled=false; btn.textContent="매직링크로 로그인"; }
+    else { msg.className="parsebox ok"; msg.innerHTML="✓ <b>"+esc(email)+"</b> 로 링크를 보냈어요. 메일함(스팸함 포함)에서 링크를 누르면 로그인됩니다."; btn.textContent="전송됨 ✓"; }
+  };
+  const b=$("#gateSend"); if(b) b.onclick=send;
+  const inp=$("#gateEmail"); if(inp){ inp.focus(); inp.addEventListener("keydown",e=>{ if(e.key==="Enter"){e.preventDefault();send();} }); }
 }
 
 function renderCrumb(){
@@ -398,6 +483,9 @@ function renderCrumb(){
     const cat=findCat(route.catId);
     h+='<span class="sep">/</span><button data-nav="home">홈</button>';
     h+='<span class="sep">/</span><span class="cur">'+esc(cat?cat.name:"")+'</span>';
+  }else if(route.view==="me"){
+    h+='<span class="sep">/</span><button data-nav="home">홈</button>';
+    h+='<span class="sep">/</span><span class="cur">마이페이지</span>';
   }
   h+='</div>';
   c.innerHTML=h;
@@ -469,19 +557,80 @@ function catHTML(){
    <div class="grid" style="gap:11px">${rows}</div>`;
 }
 
+/* ================= MY PAGE (stats) ================= */
+function meHTML(){
+  const email = session&&session.user? (session.user.email||"") : "";
+  const all = DB.cats.flatMap(c=>c.decks.map(d=>({c,d})));
+  const totalItems = all.reduce((n,x)=>n+x.d.items.length,0);
+  const played = all.filter(x=>x.d.best!=null);
+  const avgBest = played.length? Math.round(played.reduce((n,x)=>n+x.d.best,0)/played.length):0;
+  const totalWrong = all.reduce((n,x)=>n+(x.d.wrong||[]).length,0);
+  const totalFav = all.reduce((n,x)=>n+(x.d.fav||[]).length,0);
+  const tile=(label,val,sub)=>`<div class="stat-tile"><div class="sv mono">${val}</div><div class="sl">${label}</div>${sub?`<div class="ss">${sub}</div>`:``}</div>`;
+  const tiles = `<div class="stat-grid">
+    ${tile("카테고리", DB.cats.length)}
+    ${tile("학습 세트", all.length)}
+    ${tile("총 문항", totalItems)}
+    ${tile("평균 최고 정답률", played.length? avgBest+"%":"–", played.length?`푼 세트 ${played.length}개`:"아직 없음")}
+    ${tile("누적 오답", totalWrong, "다시 풀면 줄어요")}
+    ${tile("⭐ 즐겨찾기", totalFav)}
+  </div>`;
+
+  // weak: decks with accumulated wrongs (needs review)
+  const weak = all.filter(x=>(x.d.wrong||[]).length>0).sort((a,b)=>b.d.wrong.length-a.d.wrong.length);
+  const weakRows = weak.length ? weak.map(x=>`
+    <div class="stat-row">
+      <span class="sr-emoji">${esc(x.c.emoji||"📚")}</span>
+      <span class="sr-info"><b>${esc(x.d.name)}</b><span class="sr-sub">${esc(x.c.name)} · 오답 <b>${x.d.wrong.length}</b>개</span></span>
+      <button class="btn sm primary" data-review="${x.c.id}:${x.d.id}">오답 복습</button>
+    </div>`).join("")
+    : `<div class="me-empty">복습할 오답이 없어요. 완벽해요! 🎉</div>`;
+
+  // scores: played decks, lowest best first (needs work at top)
+  const scores = played.slice().sort((a,b)=>a.d.best-b.d.best);
+  const scoreRows = scores.length ? scores.map(x=>`
+    <div class="stat-row">
+      <span class="sr-emoji">${esc(x.c.emoji||"📚")}</span>
+      <span class="sr-info"><b>${esc(x.d.name)}</b><span class="sr-sub">${esc(x.c.name)}</span></span>
+      <span class="sr-bar"><span class="t"><i style="width:${x.d.best}%"></i></span></span>
+      <span class="sr-pct mono ${x.d.best>=80?'g':x.d.best>=50?'':'r'}">${x.d.best}%</span>
+      <button class="btn sm ghost" data-open-deck="${x.c.id}:${x.d.id}">열기</button>
+    </div>`).join("")
+    : `<div class="me-empty">아직 푼 세트가 없어요. 세트를 풀면 최고 정답률이 기록돼요.</div>`;
+
+  return `
+   <div class="section-head" style="margin-top:30px">
+     <div><div class="eyebrow">마이페이지</div><h2>내 학습 현황</h2></div>
+   </div>
+   <p style="color:var(--muted);margin:-6px 0 18px;font-size:14px">${esc(email)} · 정답률은 <b>전체 범위를 끝까지 푼 최고 기록</b> 기준이에요.</p>
+   ${tiles}
+   <div class="section-head"><div><h2 style="font-size:17px">복습이 필요한 세트</h2></div></div>
+   <div class="stat-list">${weakRows}</div>
+   <div class="section-head"><div><h2 style="font-size:17px">세트별 최고 정답률</h2></div></div>
+   <div class="stat-list">${scoreRows}</div>`;
+}
+
 /* ================= EVENTS ================= */
 document.addEventListener("click", e=>{
-  const t=e.target.closest("[data-nav],[data-open-cat],[data-add-cat],[data-del-cat],[data-new-deck],[data-play],[data-edit],[data-del-deck]");
+  const t=e.target.closest("[data-nav],[data-open-cat],[data-add-cat],[data-del-cat],[data-new-deck],[data-play],[data-edit],[data-del-deck],[data-open-deck],[data-review]");
   if(!t) return;
   if(t.dataset.nav==="home") return go({view:"home",catId:null});
+  if(t.dataset.nav==="me") return go({view:"me"});
+  if(t.dataset.review!=null){
+    const [cid,did]=t.dataset.review.split(":"); const cat=findCat(cid); const d=findDeck(cat,did);
+    if(d){ route={view:"cat",catId:cid}; startOpts={mode:"wrong",dir:"qa",shuffle:true,deckId:did}; launchQuiz(d); }
+    return;
+  }
   if(t.dataset.delCat!=null){ e.stopPropagation(); return delCat(t.dataset.delCat); }
   if(t.dataset.openCat!=null) return go({view:"cat",catId:t.dataset.openCat});
+  if(t.dataset.openDeck!=null){ const [cid]=t.dataset.openDeck.split(":"); return go({view:"cat",catId:cid}); }
   if(t.hasAttribute("data-add-cat")) return addCatModal();
   if(t.hasAttribute("data-new-deck")) return deckModal();
   if(t.dataset.edit!=null){ e.stopPropagation(); return renameDeck(t.dataset.edit); }
   if(t.dataset.delDeck!=null){ e.stopPropagation(); return delDeck(t.dataset.delDeck); }
   if(t.dataset.play!=null) return startModal(t.dataset.play);
 });
+$("#meBtn").addEventListener("click",()=>go({view:"me"}));
 document.addEventListener("keydown",e=>{
   const t=e.target;
   if((e.key==="Enter"||e.key===" ")&&t.matches&&t.matches("[data-del-cat],[data-edit],[data-del-deck]")){ e.preventDefault(); t.click(); }
@@ -498,16 +647,31 @@ $("#themeBtn").addEventListener("click",()=>{
 (function(){ try{const t=localStorage.getItem("amgi.theme"); if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){} })();
 
 /* ================= CATEGORY / DECK ops ================= */
+const CAT_EMOJIS=["📚","📘","📗","📙","📕","📖","✏️","📝","🧠","💡","🎯","⭐","🏆","🎓","🔤","🔢","🌍","🗣️","🇬🇧","🇰🇷","🇯🇵","🇨🇳","🇪🇸","🧮","🔬","⚗️","🧪","💻","⚙️","🔧","🛠️","✈️","🚗","🚀","🩺","⚖️","💰","🎵","🎨","🍞"];
 function addCatModal(){
+  let picked="📚";
+  const grid=CAT_EMOJIS.map(e=>`<button type="button" class="emoji-opt${e===picked?' sel':''}" data-emoji="${e}">${e}</button>`).join("");
   openModal(`<header><h3>카테고리 추가</h3>${closeX()}</header>
     <div class="body">
       <div class="field"><label>이름</label><input type="text" id="cName" placeholder="예: 컴활, 운전면허, 스페인어" autofocus></div>
-      <div class="field"><label>아이콘 (이모지, 선택)</label><input type="text" id="cEmoji" placeholder="✈️" maxlength="4"></div>
+      <div class="field">
+        <label>아이콘 <span style="font-weight:400;color:var(--muted)">— 골라주세요 (또는 직접 입력)</span></label>
+        <div class="emoji-head"><span class="emoji-preview" id="cPreview">📚</span>
+          <input type="text" id="cEmoji" placeholder="직접 입력" maxlength="4"></div>
+        <div class="emoji-grid" id="cGrid">${grid}</div>
+      </div>
     </div>
     <div class="foot"><button class="btn ghost" data-close>취소</button><button class="btn primary" id="cSave">추가</button></div>`);
+  const setPreview=e=>{ picked=e; $("#cPreview").textContent=e; };
+  $("#cGrid").addEventListener("click",ev=>{ const b=ev.target.closest("[data-emoji]"); if(!b)return;
+    [...$("#cGrid").children].forEach(x=>x.classList.toggle("sel",x===b));
+    $("#cEmoji").value=""; setPreview(b.dataset.emoji);
+  });
+  $("#cEmoji").addEventListener("input",ev=>{ const v=ev.target.value.trim();
+    if(v){ [...$("#cGrid").children].forEach(x=>x.classList.remove("sel")); setPreview(v); } });
   $("#cSave").onclick=()=>{
     const name=$("#cName").value.trim(); if(!name)return toast("이름을 입력하세요");
-    const emoji=$("#cEmoji").value.trim()||"📚";
+    const emoji=($("#cEmoji").value.trim())||picked||"📚";
     DB.cats.push({id:uid(),name,emoji,decks:[]}); save(); closeModal(); render();
   };
 }
@@ -1028,8 +1192,9 @@ function mountPlayer(){
   host.innerHTML=`<div class="player" id="player">
     <div class="progressline"><i id="pgl"></i></div>
     <div class="p-top">
-      <button class="icon-btn" id="quitBtn" title="나가기" aria-label="나가기">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      <button class="icon-btn quit-btn" id="quitBtn" title="나가기 (Esc)" aria-label="나가기">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        <span>나가기</span>
       </button>
       <div class="spacer"></div>
       <div class="p-count" id="pcount"></div>
@@ -1229,7 +1394,7 @@ function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("sh
 const SUPA_URL = "https://djmexkzwummuocmndepw.supabase.co";
 const SUPA_KEY = "sb_publishable_nWyyRqDANEFmkWaEdVeNbQ_UoV_INws"; // publishable/anon key — safe in the client (RLS protects data)
 
-let sb=null, session=null;
+let sb=null, session=null, authReady=false;
 let syncReady=false, syncT=null, syncing=false, syncDirty=false, syncState="idle";
 
 function uuid(){
@@ -1257,15 +1422,17 @@ async function runSync(){
 /* ---- auth UI (topbar) ---- */
 function renderAuth(){
   const box=$("#authBox"); if(!box) return;
+  const meBtn=$("#meBtn");
+  const loggedIn = !!(session && session.user);
+  if(meBtn) meBtn.classList.toggle("hide", !loggedIn);
   if(!sb){ box.innerHTML=`<span class="auth-off mono" title="클라우드에 연결하지 못했어요 — 이 기기에만 저장됩니다">오프라인</span>`; return; }
-  if(session && session.user){
+  if(loggedIn){
     const email=session.user.email||"계정";
     box.innerHTML=`<button class="btn sm ghost" id="acctBtn" title="${esc(email)} · 눌러서 계정/동기화">
         <span class="dot-sync ${syncState}"></span><span class="acct-email">${esc(email)}</span></button>`;
     $("#acctBtn").onclick=acctMenu;
   }else{
-    box.innerHTML=`<button class="btn sm primary" id="loginBtn">로그인</button>`;
-    $("#loginBtn").onclick=loginModal;
+    box.innerHTML=``; // signed out → the full-screen gate handles login
   }
 }
 
@@ -1431,6 +1598,7 @@ async function bootstrapSync(){
 }
 
 async function onSession(s){
+  authReady=true; // auth has resolved at least once
   const was=session&&session.user? session.user.id : null;
   session=s;
   const now=s&&s.user? s.user.id : null;
@@ -1440,8 +1608,13 @@ async function onSession(s){
     if(location.hash.includes("access_token")) history.replaceState(null,"",location.pathname+location.search);
     await bootstrapSync();
   }else if(!now && was){
-    syncReady=false; syncState="idle"; renderAuth();
+    // signed out → drop local cache (don't leak to next account) and show the gate
+    syncReady=false; syncState="idle"; DB={cats:[]}; persistLocal();
+    route={view:"home",catId:null,deckId:null};
+    renderAuth(); render();
     toast("로그아웃되었습니다");
+  }else{
+    render(); // no change (initial no-session → gate; token refresh → app)
   }
 }
 
@@ -1454,11 +1627,11 @@ async function initSupabase(){
     sb=createClient(SUPA_URL,SUPA_KEY,{ auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true, flowType:"implicit" } });
   }catch(e){
     console.warn("[supa] client failed to load — running local-only",e);
-    sb=null; renderAuth(); return;
+    sb=null; authReady=true; renderAuth(); render(); return;
   }
   sb.auth.onAuthStateChange((_ev,s)=>{ onSession(s); });
   try{ const { data:{ session:s } }=await sb.auth.getSession(); await onSession(s); }
-  catch(e){ console.warn("[supa] getSession failed",e); renderAuth(); }
+  catch(e){ console.warn("[supa] getSession failed",e); authReady=true; renderAuth(); render(); }
 }
 
 /* ================= go ================= */

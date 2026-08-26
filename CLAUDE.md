@@ -20,10 +20,12 @@ UX 레퍼런스 = 단어 → 뜻 4지선다 카드형 화면(상단 진행바, �
 
 ## 현재 아키텍처
 
-- **전부 `index.html` 한 파일.** 순수 HTML/CSS/JS, 의존성 0, 빌드 0.
-- 상태는 메모리 객체 `DB`에 두고 `localStorage`(`amgi.db.v3`)로 직렬화.
-- 라우팅은 `route={view,catId,deckId}` + `render()` 재그리기(프레임워크 없음).
-- 뷰: `homeHTML()`(카테고리 카드) → `catHTML()`(세트 목록) → 퀴즈 플레이어(`launchQuiz`/`renderQuestion`/`answer`/`finish`).
+- **전부 `index.html` 한 파일.** 순수 HTML/CSS/JS, 의존성 0, 빌드 0. (supabase-js·pdf.js는 필요 시 CDN ESM 동적 import)
+- 상태는 메모리 객체 `DB`에 두고 `localStorage`(`amgi.db.v3`)로 직렬화 → 오프라인 읽기 캐시.
+- **로그인 필수(게이트)**: `authReady`/`session` 해석 전엔 `bootingHTML`, 미로그인은 `gateHTML`(매직링크). 로그인해야 앱 진입. `sb` 로드 실패 시에만 로컬 모드로 게이트 우회.
+- **시드 없음**: 계정별 공간이라 `DB=load()||{cats:[]}`로 빈 상태 시작(`seedDB()`는 남겨두되 자동호출 안 함). 로그인 시 서버 pull이 우선.
+- 라우팅은 `route={view,catId,deckId}` + `render()` 재그리기(프레임워크 없음). view: `home`·`cat`·`me`(마이페이지).
+- 뷰: `homeHTML()`(카테고리 카드) → `catHTML()`(세트 목록) → 퀴즈 플레이어(`launchQuiz`/`renderQuestion`/`answer`/`finish`), `meHTML()`(통계: 타일·복습필요·정답률).
 
 ### 데이터 모델
 ```
