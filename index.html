@@ -224,6 +224,14 @@ input:focus,textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 
 }
 .hide{display:none!important}
 
+/* ---------- quit confirm (inside player) ---------- */
+.p-confirm{position:absolute;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;padding:24px;background:color-mix(in srgb,var(--bg) 68%,transparent);backdrop-filter:blur(6px)}
+.p-confirm-card{width:100%;max-width:360px;background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow-lg);padding:26px 24px;text-align:center}
+.p-confirm-card h3{font-size:19px;margin-bottom:8px}
+.p-confirm-card p{color:var(--muted);font-size:13.5px;line-height:1.6;margin:0 0 20px}
+.p-confirm-card .row{display:flex;gap:10px}
+.p-confirm-card .row .btn{flex:1;justify-content:center}
+
 /* ---------- auth / sync ---------- */
 .authbox{display:flex;align-items:center;gap:8px}
 .authbox .acct-email{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -910,9 +918,31 @@ function mountPlayer(){
   </div>`;
   $("#quitBtn").onclick=quitQuiz;
 }
-function quitQuiz(){
+function quitQuiz(force){
+  // ask before bailing mid-quiz (not on the result screen)
+  if(force!==true && Q && Q.pos < Q.idxs.length){
+    if(!document.getElementById("quitAsk")) showQuitConfirm();
+    return;
+  }
   document.removeEventListener("keydown",keyHandler);
   $("#modalHost").innerHTML=""; Q=null; render();
+}
+function showQuitConfirm(){
+  const p=$("#player"); if(!p)return;
+  const el=document.createElement("div");
+  el.id="quitAsk"; el.className="p-confirm fade";
+  el.innerHTML=`<div class="p-confirm-card">
+      <h3>그만둘까요?</h3>
+      <p>지금까지의 <b>오답·즐겨찾기는 저장</b>돼요. 최고 기록(%)은 끝까지 풀어야 갱신됩니다.</p>
+      <div class="row">
+        <button class="btn" id="qCont">계속 풀기</button>
+        <button class="btn danger" id="qQuit" style="border-color:var(--bad);color:var(--bad)">그만두기</button>
+      </div>
+    </div>`;
+  p.appendChild(el);
+  const close=()=>{ const q=document.getElementById("quitAsk"); if(q)q.remove(); };
+  $("#qCont").onclick=close;
+  $("#qQuit").onclick=()=>quitQuiz(true);
 }
 function renderQuestion(){
   const {deck,idxs,pos,isV,dir}=Q;
@@ -1001,7 +1031,7 @@ function promptTextForReview(){
 function next(){ Q.pos++; if(Q.pos>=Q.idxs.length) finish(); else renderQuestion(); }
 function keyHandler(e){
   if(!Q)return;
-  if(e.key==="Escape"){ quitQuiz(); return; }
+  if(e.key==="Escape"){ const qa=document.getElementById("quitAsk"); if(qa){qa.remove();} else quitQuiz(); return; }
   if(Q.answered)return;
   if(e.key>="1"&&e.key<="5"){ const i=+e.key-1; const b=document.querySelector(`#choices [data-c="${i}"]`); if(b)answer(i); }
   else if(e.key==="9") answer(-1);
