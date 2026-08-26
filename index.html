@@ -609,15 +609,24 @@ function parseVocabPaste(text){
   });
   return items;
 }
-// vocab rows (from a real .xlsx grid) -> items ; 2-col table (word, meaning)
+// vocab rows (real grid: .xlsx cells or quoted CSV) -> items.
+// col0 = word; meaning = remaining NON-EMPTY cells joined (drops trailing empty
+// columns like "waive","뜻","","" and re-joins an unquoted meaning that got
+// split across columns, e.g. janitor,문지기, 관리인).
 function rowsToVocab(rows){
-  let start=0;
-  const h=(rows[0]||[]).map(c=>String(c).trim().toLowerCase());
-  if(h.length && /단어|word|english|영어|표제/.test(h[0]) && /뜻|meaning|kor|한글|의미/.test(h[1]||"")) start=1;
+  if(!rows.length) return [];
+  const first=(rows[0]||[]).map(c=>String(c==null?"":c).trim());
+  const nonEmpty0=first.filter(c=>c!=="");
+  const kwHeader = /단어|word|english|영어|표제|term/i.test(first[0]||"")
+                 && /뜻|meaning|kor|한글|의미|definition|def/i.test(first[1]||"");
+  // header like "T","D","P","E": every non-empty cell is a 1–3 letter ASCII token
+  const codeHeader = nonEmpty0.length>=2 && nonEmpty0.every(c=>/^[A-Za-z]{1,3}$/.test(c));
+  const start = (kwHeader||codeHeader) ? 1 : 0;
   const items=[];
   for(let i=start;i<rows.length;i++){
-    const r=rows[i]; if(!r)continue;
-    const w=String(r[0]||"").trim(); const m=String(r[1]!=null?r[1]:"").trim();
+    const r=(rows[i]||[]).map(c=>String(c==null?"":c).trim());
+    const w=r[0]; if(!w) continue;
+    const m=r.slice(1).filter(c=>c!=="").join(", ").replace(/\s*,\s*$/,"").trim();
     if(w&&m) items.push({q:w,a:m});
   }
   return items;
@@ -727,10 +736,10 @@ async function onFile(e){
     const isXlsx=/\.xlsx$/i.test(f.name);
     let items;
     if(deckDraft.type==="vocab"){
-      // xlsx -> real grid cells; text (csv/tsv/txt) -> first-delimiter line parse
-      // so commas inside a meaning survive.
-      items = isXlsx ? rowsToVocab(await readXlsx(await f.arrayBuffer()))
-                     : parseVocabPaste(await f.text());
+      // both xlsx and text files go through a real table parser so that
+      // quoted CSV ("waive","뜻","","") and unquoted commas both come out clean.
+      const rows = isXlsx ? await readXlsx(await f.arrayBuffer()) : parseCSV(await f.text());
+      items = rowsToVocab(rows);
     } else {
       const rows = isXlsx ? await readXlsx(await f.arrayBuffer()) : parseCSV(await f.text());
       items = rowsToQuiz(rows);
