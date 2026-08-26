@@ -224,6 +224,21 @@ input:focus,textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 
 }
 .hide{display:none!important}
 
+/* ---------- answer editor ---------- */
+.ae-body{max-height:min(64vh,560px);overflow:auto}
+.ae-info{position:sticky;top:0;z-index:2;margin-bottom:14px}
+.ae-q{border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin-bottom:10px;background:var(--panel)}
+.ae-q.need{border-color:var(--bad);box-shadow:0 0 0 3px var(--bad-soft)}
+.ae-stem{display:flex;gap:9px;align-items:flex-start;font-weight:700;font-size:14px;line-height:1.5;margin-bottom:10px}
+.ae-num{flex:none;min-width:22px;height:22px;padding:0 5px;border-radius:6px;background:var(--panel-2);border:1px solid var(--line);color:var(--muted);font-size:12px;display:inline-flex;align-items:center;justify-content:center}
+.ae-badge{flex:none;font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px;background:var(--bad-soft);color:var(--bad);letter-spacing:.02em}
+.ae-choices{display:grid;gap:7px}
+.ae-choice{display:flex;align-items:center;gap:11px;text-align:left;background:var(--panel-2);border:1px solid var(--line-2);border-radius:10px;padding:10px 12px;font-size:13.5px;font-weight:600;line-height:1.35}
+.ae-choice:hover{border-color:var(--accent)}
+.ae-choice .idx{flex:none;width:22px;height:22px;border-radius:6px;background:var(--panel);border:1px solid var(--line);display:grid;place-items:center;font-size:12px;font-weight:700;color:var(--muted)}
+.ae-choice.sel{border-color:var(--good);background:var(--good-soft);color:var(--good)}
+.ae-choice.sel .idx{background:var(--good);color:#fff;border-color:var(--good)}
+
 /* ---------- quit confirm (inside player) ---------- */
 .p-confirm{position:absolute;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;padding:24px;background:color-mix(in srgb,var(--bg) 68%,transparent);backdrop-filter:blur(6px)}
 .p-confirm-card{width:100%;max-width:360px;background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow-lg);padding:26px 24px;text-align:center}
@@ -570,14 +585,14 @@ function renderMethod(){
     host.innerHTML=`<div class="field" style="margin-bottom:6px">
         <label class="add-card" style="min-height:118px;cursor:pointer" for="fileIn" tabindex="0">
           <span class="plus">⬆</span>
-          <span>클릭해서 파일 선택 <span style="color:var(--faint);font-weight:400">(.xlsx · .csv · .txt)</span></span>
+          <span>클릭해서 파일 선택 <span style="color:var(--faint);font-weight:400">(.xlsx · .csv · .txt${isV?'':' · .pdf'})</span></span>
           <span id="fileName" class="mono" style="font-size:12px;color:var(--faint)"></span>
         </label>
-        <input id="fileIn" type="file" accept=".xlsx,.csv,.txt,.tsv" class="hide">
+        <input id="fileIn" type="file" accept="${isV?'.xlsx,.csv,.txt,.tsv':'.xlsx,.csv,.txt,.tsv,.pdf'}" class="hide">
         <div class="hint">
           ${isV
             ? `열 순서: <b>1열 = 단어, 2열 = 뜻</b>. 첫 줄이 머리글이면 자동으로 건너뜁니다.`
-            : `열 순서: <b>문제 · 보기A · 보기B · 보기C · 보기D · 정답</b>. 정답 칸은 <code>A~E</code> 또는 <code>1~5</code> 또는 정답 문장 그대로.`}
+            : `엑셀·CSV는 <b>문제 · 보기A~E · 정답</b> 열 순서. <b>PDF</b>는 <code>1. 문제 / A. 보기</code> 형식을 자동 인식해요(정답은 다음 단계에서 지정). 한글(.hwp)은 한글에서 <b>PDF로 저장</b> 후 올리세요.`}
         </div>
       </div>`;
     $("#fileIn").addEventListener("change",onFile);
@@ -679,7 +694,7 @@ function textToQuiz(text){
   const items=[]; let cur=null; let pendingAns=null;
   const flush=()=>{ if(cur&&cur.choices.length>=2){
       if(cur.answer<0 && pendingAns) cur.answer=resolveAnswer(pendingAns,cur.choices);
-      if(cur.answer<0) cur.answer=0;
+      if(cur.answer<0){ cur.answer=0; cur.__guessed=true; } // no mark found → needs review
       items.push(cur);
     } cur=null; pendingAns=null; };
   for(let raw of lines){
@@ -729,9 +744,12 @@ function updateParseBox(items){
     box.className="parsebox ok";
     box.innerHTML=`✓ 단어 <b>${items.length}</b>개 인식됨 &nbsp;·&nbsp; 예: <b>${esc(items[0].q)}</b> → ${esc(items[0].a)}`;
   } else {
-    const noAns=items.filter(x=>x.answer===0 && x.__guessed).length;
+    const guessed=items.filter(x=>x.__guessed).length;
     box.className="parsebox ok";
-    box.innerHTML=`✓ 문제 <b>${items.length}</b>개 인식됨 &nbsp;·&nbsp; 평균 보기 ${(items.reduce((n,x)=>n+x.choices.length,0)/items.length).toFixed(1)}개`;
+    box.innerHTML=`✓ 문제 <b>${items.length}</b>개 인식됨`
+      + (guessed
+          ? ` &nbsp;·&nbsp; 정답 확인 필요 <b>${guessed}</b>개 <span style="opacity:.8">(다음 단계에서 지정)</span>`
+          : ` &nbsp;·&nbsp; 정답 포함됨`);
   }
   if(btn) btn.disabled=false;
 }
@@ -739,11 +757,17 @@ function updateParseBox(items){
 async function onFile(e){
   const f=e.target.files[0]; if(!f)return;
   $("#fileName").textContent=f.name;
-  const box=$("#pbox"); box.className="parsebox idle"; box.textContent="파일 읽는 중…";
+  const box=$("#pbox"); box.className="parsebox idle";
+  const isXlsx=/\.xlsx$/i.test(f.name);
+  const isPdf=/\.pdf$/i.test(f.name);
+  box.textContent= isPdf ? "PDF 읽는 중… (처음엔 몇 초 걸려요)" : "파일 읽는 중…";
   try{
-    const isXlsx=/\.xlsx$/i.test(f.name);
     let items;
-    if(deckDraft.type==="vocab"){
+    if(isPdf){
+      // PDF -> text -> numbered-question parser (or vocab paste for word lists)
+      const text=await readPdf(await f.arrayBuffer());
+      items = deckDraft.type==="vocab" ? parseVocabPaste(text) : textToQuiz(text);
+    } else if(deckDraft.type==="vocab"){
       // both xlsx and text files go through a real table parser so that
       // quoted CSV ("waive","뜻","","") and unquoted commas both come out clean.
       const rows = isXlsx ? await readXlsx(await f.arrayBuffer()) : parseCSV(await f.text());
@@ -754,10 +778,12 @@ async function onFile(e){
       if(items.length===0) items = textToQuiz(rows.map(r=>r.join(" ")).join("\n"));
     }
     deckDraft.items=items;
-    if(!$("#dName").value.trim()) $("#dName").value=f.name.replace(/\.(xlsx|csv|txt|tsv)$/i,"");
+    if(!$("#dName").value.trim()) $("#dName").value=f.name.replace(/\.(xlsx|csv|txt|tsv|pdf)$/i,"");
     updateParseBox(items);
   }catch(err){
-    box.className="parsebox warn"; box.textContent="파일을 읽지 못했어요. CSV로 저장하거나 붙여넣기를 사용해 보세요.";
+    box.className="parsebox warn";
+    box.textContent= isPdf ? "PDF를 읽지 못했어요. 텍스트가 이미지로만 된 스캔본이면 인식이 안 될 수 있어요."
+                           : "파일을 읽지 못했어요. CSV로 저장하거나 붙여넣기를 사용해 보세요.";
     console.error(err);
   }
 }
@@ -767,9 +793,56 @@ function createDeck(){
   const items=deckDraft.items;
   if(!items.length) return toast("인식된 항목이 없어요");
   if(deckDraft.type==="vocab" && items.length<4) return toast("4지선다를 만들려면 단어가 4개 이상 필요해요");
-  let name=($("#dName").value||"").trim() || (deckDraft.type==="vocab"?"새 단어장":"새 문제 세트");
+  const name=($("#dName").value||"").trim() || (deckDraft.type==="vocab"?"새 단어장":"새 문제 세트");
+  // quiz with unconfirmed answers → let the user set them first
+  if(deckDraft.type==="quiz" && items.some(x=>x.__guessed)) return answerEditorModal(name,items);
+  finalizeDeck(name,items);
+}
+function finalizeDeck(name,items){
+  const cat=findCat(route.catId); if(!cat)return;
+  items.forEach(it=>{ delete it.__guessed; });
   cat.decks.push({id:uid(),name,type:deckDraft.type,created:Date.now(),items,fav:[],wrong:[],best:null});
   save(); closeModal(); render(); toast("세트가 추가됐어요 ✓");
+}
+
+/* ---- answer editor: set the correct choice per question ---- */
+function answerEditorModal(name,items){
+  const cards=items.map((it,qi)=>`
+    <div class="ae-q${it.__guessed?' need':''}" data-q="${qi}">
+      <div class="ae-stem"><span class="ae-num mono">${qi+1}</span><span>${esc(it.q)}</span>
+        ${it.__guessed?'<span class="ae-badge">정답?</span>':''}</div>
+      <div class="ae-choices">
+        ${it.choices.map((c,ci)=>`<button class="ae-choice${ci===it.answer?' sel':''}" data-q="${qi}" data-c="${ci}">
+            <span class="idx mono">${"ABCDE"[ci]||(ci+1)}</span><span>${esc(c)}</span></button>`).join("")}
+      </div>
+    </div>`).join("");
+  openModal(`<header><h3>정답 지정 · ${esc(name)}</h3>${closeX()}</header>
+    <div class="body ae-body">
+      <div class="parsebox ${items.some(x=>x.__guessed)?'warn':'ok'} ae-info" id="aeInfo"></div>
+      ${cards}
+    </div>
+    <div class="foot">
+      <button class="btn ghost" data-close>취소</button>
+      <button class="btn primary" id="aeDone">세트 만들기</button>
+    </div>`);
+  const refresh=()=>{
+    const left=items.filter(x=>x.__guessed).length;
+    const el=$("#aeInfo");
+    if(left){ el.className="parsebox warn ae-info";
+      el.innerHTML=`정답을 못 찾은 문제 <b>${left}</b>개 — 각 문제에서 <b>맞는 보기</b>를 눌러 지정하세요. (안 눌러도 되지만 A로 남아요)`; }
+    else { el.className="parsebox ok ae-info"; el.innerHTML="✓ 모든 문제의 정답이 지정됐어요."; }
+  };
+  refresh();
+  $(".ae-body").addEventListener("click",e=>{
+    const b=e.target.closest(".ae-choice"); if(!b)return;
+    const qi=+b.dataset.q, ci=+b.dataset.c;
+    items[qi].answer=ci; items[qi].__guessed=false;
+    const card=b.closest(".ae-q"); card.classList.remove("need");
+    const badge=card.querySelector(".ae-badge"); if(badge)badge.remove();
+    [...card.querySelectorAll(".ae-choice")].forEach(x=>x.classList.toggle("sel",x===b));
+    refresh();
+  });
+  $("#aeDone").onclick=()=>finalizeDeck(name,items);
 }
 
 /* ================= XLSX reader (no external lib) ================= */
@@ -849,6 +922,32 @@ async function readXlsx(buf){
 }
 function colNum(ref){ let n=0; for(const ch of ref){ n=n*26+(ch.charCodeAt(0)-64);} return n-1; }
 function unxml(s){ return String(s).replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&#(\d+);/g,(_,d)=>String.fromCharCode(+d)).replace(/&amp;/g,"&"); }
+
+/* ================= PDF reader (pdf.js, loaded on demand) ================= */
+const PDFJS_VER="4.10.38";
+let _pdfjs=null;
+async function ensurePdfjs(){
+  if(_pdfjs) return _pdfjs;
+  const m=await import(`https://esm.sh/pdfjs-dist@${PDFJS_VER}/build/pdf.min.mjs`);
+  try{ m.GlobalWorkerOptions.workerSrc=`https://esm.sh/pdfjs-dist@${PDFJS_VER}/build/pdf.worker.min.mjs`; }catch(e){}
+  _pdfjs=m; return m;
+}
+// PDF -> plain text with line breaks (so textToQuiz's line rules work).
+async function readPdf(buf){
+  const pdfjs=await ensurePdfjs();
+  const doc=await pdfjs.getDocument({data:new Uint8Array(buf)}).promise;
+  let out="";
+  for(let p=1;p<=doc.numPages;p++){
+    const page=await doc.getPage(p);
+    const tc=await page.getTextContent();
+    let line="";
+    for(const it of tc.items){ line+=it.str; if(it.hasEOL){ out+=line+"\n"; line=""; } }
+    if(line) out+=line+"\n";
+    out+="\n"; // blank line between pages
+  }
+  try{ doc.destroy(); }catch(e){}
+  return out;
+}
 
 /* ================= START MODAL ================= */
 let startOpts={mode:"all", dir:"qa", shuffle:true, count:0};
