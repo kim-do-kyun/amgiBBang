@@ -49,6 +49,7 @@
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
+html{overflow-x:clip}
 body{
   background:var(--bg); color:var(--ink);
   font-family:"Noto Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
@@ -109,7 +110,7 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .add-card .plus{font-size:26px;line-height:1;font-weight:400}
 
 /* ---------- deck rows ---------- */
-.deck{display:flex;align-items:center;gap:16px;text-align:left;width:100%;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-sm);padding:16px 18px;box-shadow:var(--shadow);transition:border-color .15s,transform .1s}
+.deck{display:flex;align-items:center;gap:16px;text-align:left;width:100%;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-sm);padding:16px 18px;box-shadow:var(--shadow);transition:border-color .15s,transform .1s}
 .deck:hover{border-color:var(--accent);transform:translateY(-2px)}
 .deck .kind{flex:none;width:44px;height:44px;border-radius:11px;display:grid;place-items:center;font-size:12px;font-weight:800;letter-spacing:.02em}
 .kind.vocab{background:var(--accent-soft);color:var(--accent-ink)}
@@ -138,7 +139,7 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .modal header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--line)}
 .modal header h3{font-size:16px}
 .modal .body{padding:20px}
-.modal .foot{display:flex;gap:10px;justify-content:flex-end;padding:16px 20px;border-top:1px solid var(--line);background:var(--panel-2)}
+.modal .foot{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;padding:16px 20px;border-top:1px solid var(--line);background:var(--panel-2)}
 .field{margin-bottom:16px}
 .field label{display:block;font-weight:700;font-size:13px;margin-bottom:7px}
 .field .hint{color:var(--muted);font-weight:400;font-size:12px;margin-top:5px;line-height:1.55}
@@ -221,6 +222,12 @@ input:focus,textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 
   .p-choices{grid-template-columns:1fr}
   .card{padding:34px 20px}
   .section-head{margin-top:26px}
+  /* compact top bar so brand + breadcrumb + account fit 375px */
+  .topbar .row{gap:8px}
+  .crumb{overflow:hidden;flex:1 1 auto}
+  .brand{font-size:15px}
+  .brand small{display:none}
+  .crumb .cur{max-width:30vw}
 }
 .hide{display:none!important}
 
@@ -257,7 +264,11 @@ input:focus,textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 
 .dot-sync.err{background:var(--bad)}
 .dot-sync.off{background:var(--faint)}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-@media (max-width:600px){ .authbox .acct-email{max-width:92px} }
+/* mobile auth overrides — placed after the base auth rules so they win */
+@media (max-width:600px){
+  .authbox .acct-email{max-width:56px}
+  .authbox .btn.sm{padding:6px 9px}
+}
 </style>
 </head>
 <body>
@@ -823,14 +834,21 @@ function answerEditorModal(name,items){
     </div>
     <div class="foot">
       <button class="btn ghost" data-close>취소</button>
+      <button class="btn" id="aeSkip">정답 없는 문제 빼기</button>
       <button class="btn primary" id="aeDone">세트 만들기</button>
     </div>`);
   const refresh=()=>{
     const left=items.filter(x=>x.__guessed).length;
-    const el=$("#aeInfo");
-    if(left){ el.className="parsebox warn ae-info";
-      el.innerHTML=`정답을 못 찾은 문제 <b>${left}</b>개 — 각 문제에서 <b>맞는 보기</b>를 눌러 지정하세요. (안 눌러도 되지만 A로 남아요)`; }
-    else { el.className="parsebox ok ae-info"; el.innerHTML="✓ 모든 문제의 정답이 지정됐어요."; }
+    const el=$("#aeInfo"), skip=$("#aeSkip"), done=$("#aeDone");
+    if(left){
+      el.className="parsebox warn ae-info";
+      el.innerHTML=`정답을 못 찾은 문제 <b>${left}</b>개 — 맞는 보기를 눌러 지정하거나, 아래 <b>“정답 없는 문제 빼기”</b>로 제외하세요.`;
+      skip.classList.remove("hide"); skip.textContent=`정답 없는 ${left}개 빼고 만들기`;
+      done.textContent=`그대로 만들기 (미지정은 A)`;
+    }else{
+      el.className="parsebox ok ae-info"; el.innerHTML="✓ 모든 문제의 정답이 지정됐어요.";
+      skip.classList.add("hide"); done.textContent="세트 만들기";
+    }
   };
   refresh();
   $(".ae-body").addEventListener("click",e=>{
@@ -842,6 +860,11 @@ function answerEditorModal(name,items){
     [...card.querySelectorAll(".ae-choice")].forEach(x=>x.classList.toggle("sel",x===b));
     refresh();
   });
+  $("#aeSkip").onclick=()=>{
+    const kept=items.filter(x=>!x.__guessed);
+    if(!kept.length) return toast("정답을 지정한 문제가 없어요");
+    finalizeDeck(name,kept);
+  };
   $("#aeDone").onclick=()=>finalizeDeck(name,items);
 }
 
@@ -1425,7 +1448,10 @@ async function onSession(s){
 async function initSupabase(){
   try{
     const { createClient }=await import("https://esm.sh/@supabase/supabase-js@2");
-    sb=createClient(SUPA_URL,SUPA_KEY,{ auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true } });
+    // implicit flow: magic link carries the token in the URL hash, so it works
+    // even when the email app opens the link in a different browser/webview
+    // (PKCE would require the same browser that requested the link — breaks on mobile).
+    sb=createClient(SUPA_URL,SUPA_KEY,{ auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true, flowType:"implicit" } });
   }catch(e){
     console.warn("[supa] client failed to load — running local-only",e);
     sb=null; renderAuth(); return;
