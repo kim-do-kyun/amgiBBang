@@ -809,14 +809,14 @@ function renderMethod(){
     host.innerHTML=`<div class="field" style="margin-bottom:6px">
         <label class="add-card" style="min-height:118px;cursor:pointer" for="fileIn" tabindex="0">
           <span class="plus">⬆</span>
-          <span>클릭해서 파일 선택 <span style="color:var(--faint);font-weight:400">(.xlsx · .csv · .txt${isV?'':' · .pdf'})</span></span>
+          <span>클릭해서 파일 선택 <span style="color:var(--faint);font-weight:400">(.xlsx · .csv · .txt${isV?'':' · .pdf'} · 캡쳐 이미지)</span></span>
           <span id="fileName" class="mono" style="font-size:12px;color:var(--faint)"></span>
         </label>
-        <input id="fileIn" type="file" accept="${isV?'.xlsx,.csv,.txt,.tsv':'.xlsx,.csv,.txt,.tsv,.pdf'}" class="hide">
+        <input id="fileIn" type="file" accept="${isV?'.xlsx,.csv,.txt,.tsv':'.xlsx,.csv,.txt,.tsv,.pdf'},.png,.jpg,.jpeg,.webp,.bmp,image/*" class="hide">
         <div class="hint">
           ${isV
-            ? `열 순서: <b>1열 = 단어, 2열 = 뜻</b>. 첫 줄이 머리글이면 자동으로 건너뜁니다.`
-            : `엑셀·CSV는 <b>문제 · 보기A~E · 정답</b> 열 순서. <b>PDF</b>는 <code>1. 문제 / A. 보기</code> 형식을 자동 인식해요(정답은 다음 단계에서 지정). 한글(.hwp)은 한글에서 <b>PDF로 저장</b> 후 올리세요.`}
+            ? `열 순서: <b>1열 = 단어, 2열 = 뜻</b>. 첫 줄이 머리글이면 자동으로 건너뜁니다.<br><b>단어 캡쳐(스크린샷) 이미지</b>도 올리면 글자를 인식(OCR)해 자동 입력돼요 — <code>단어 뜻</code>이 한 줄씩인 또렷한 캡쳐가 잘 됩니다(처음 한 번은 언어데이터를 받느라 느려요).`
+            : `엑셀·CSV는 <b>문제 · 보기A~E · 정답</b> 열 순서. <b>PDF·캡쳐 이미지</b>는 <code>1. 문제 / A. 보기</code> 형식을 자동 인식해요(정답은 다음 단계에서 지정). 한글(.hwp)은 한글에서 <b>PDF로 저장</b> 후 올리세요.`}
         </div>
       </div>`;
     $("#fileIn").addEventListener("change",onFile);
@@ -993,10 +993,18 @@ async function onFile(e){
   const box=$("#pbox"); box.className="parsebox idle";
   const isXlsx=/\.xlsx$/i.test(f.name);
   const isPdf=/\.pdf$/i.test(f.name);
-  box.textContent= isPdf ? "PDF 읽는 중… (처음엔 몇 초 걸려요)" : "파일 읽는 중…";
+  const isImg=/\.(png|jpe?g|webp|bmp|gif)$/i.test(f.name) || /^image\//.test(f.type||"");
+  box.textContent= isImg ? "이미지 준비 중…" : isPdf ? "PDF 읽는 중… (처음엔 몇 초 걸려요)" : "파일 읽는 중…";
   try{
     let items;
-    if(isPdf){
+    if(isImg){
+      // OCR the screenshot, then parse like pasted text
+      const text=await readImage(f, m=>{
+        if(m&&m.status==="recognizing text"){ box.className="parsebox idle"; box.textContent=`글자 인식 중… ${Math.round((m.progress||0)*100)}%`; }
+        else if(m&&m.status){ box.className="parsebox idle"; box.textContent=`OCR 준비 중… (${m.status}) — 처음엔 언어데이터를 받느라 좀 걸려요`; }
+      });
+      items = deckDraft.type==="vocab" ? imageTextToVocab(text) : textToQuiz(text);
+    } else if(isPdf){
       // PDF -> text -> numbered-question parser (or vocab paste for word lists)
       const text=await readPdf(await f.arrayBuffer());
       items = deckDraft.type==="vocab" ? parseVocabPaste(text) : textToQuiz(text);
@@ -1011,11 +1019,13 @@ async function onFile(e){
       if(items.length===0) items = textToQuiz(rows.map(r=>r.join(" ")).join("\n"));
     }
     deckDraft.items=items;
-    if(!$("#dName").value.trim()) $("#dName").value=f.name.replace(/\.(xlsx|csv|txt|tsv|pdf)$/i,"");
+    if(!$("#dName").value.trim()) $("#dName").value=f.name.replace(/\.(xlsx|csv|txt|tsv|pdf|png|jpe?g|webp|bmp|gif)$/i,"");
     updateParseBox(items);
+    if(isImg && !items.length){ box.className="parsebox warn"; box.textContent="글자를 못 읽었어요. 더 또렷한(고해상도) 캡쳐이거나, 한 줄에 '단어 뜻' 형태면 잘 돼요."; }
   }catch(err){
     box.className="parsebox warn";
-    box.textContent= isPdf ? "PDF를 읽지 못했어요. 텍스트가 이미지로만 된 스캔본이면 인식이 안 될 수 있어요."
+    box.textContent= isImg ? "이미지 인식에 실패했어요. 캡쳐가 또렷한지 확인하거나 붙여넣기를 사용해 보세요."
+                   : isPdf ? "PDF를 읽지 못했어요. 텍스트가 이미지로만 된 스캔본이면 인식이 안 될 수 있어요."
                            : "파일을 읽지 못했어요. CSV로 저장하거나 붙여넣기를 사용해 보세요.";
     console.error(err);
   }
@@ -1206,6 +1216,43 @@ async function readPdf(buf){
   }
   try{ doc.destroy(); }catch(e){}
   return out;
+}
+
+/* ================= OCR (tesseract.js, loaded on demand) ================= */
+let _tess=null;
+async function ensureTesseract(){
+  if(_tess) return _tess;
+  const m=await import("https://esm.sh/tesseract.js@5");
+  _tess = m.recognize? m : (m.default||m);
+  return _tess;
+}
+// image (screenshot) -> recognized text. Korean + English.
+async function readImage(file, onProgress){
+  const T=await ensureTesseract();
+  const recognize = T.recognize || (T.default&&T.default.recognize);
+  const { data }=await recognize(file, "eng+kor", { logger: m=>{ if(onProgress) onProgress(m); } });
+  return (data&&data.text)||"";
+}
+// OCR text of a vocab screenshot -> items. Handles "word 뜻" (space-separated)
+// by splitting at the first Hangul char; falls back to tab/2+spaces columns.
+function imageTextToVocab(text){
+  const items=[];
+  text.split(/\r?\n/).forEach(raw=>{
+    let line=raw.replace(/\s+/g," ").trim();
+    if(!line) return;
+    line=line.replace(/^\d+[.)\s]+/,"").trim(); // drop leading "1. "
+    let word,mean;
+    if(line.includes("\t")){ const i=line.indexOf("\t"); word=line.slice(0,i); mean=line.slice(i+1); }
+    else{
+      const h=line.match(/[가-힣]/); // English word → Korean meaning
+      if(h){ word=line.slice(0,h.index); mean=line.slice(h.index); }
+      else{ const parts=line.split(/\s{2,}/); if(parts.length>=2){ word=parts[0]; mean=parts.slice(1).join(" "); } else return; }
+    }
+    word=(word||"").replace(/[|"'`_]+/g," ").trim();
+    mean=(mean||"").trim();
+    if(word && mean) items.push({q:word,a:mean});
+  });
+  return items;
 }
 
 /* ================= START MODAL ================= */
