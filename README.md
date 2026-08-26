@@ -1,13 +1,18 @@
-# 암기훈련소 (Amgi Drill)
+# amgiBBang (암기빵) 🍞
 
 엑셀·CSV로 단어와 문제를 올려 **4지선다 퀴즈**로 외우는 학습 웹앱.
 카테고리(토익 · 항공 …)로 나눠 세트를 만들고, 진행률·오답·즐겨찾기를 기록한다.
-첨부한 스크린샷(단어 → 뜻 4지선다)과 같은 풀이 화면이 기본이다.
+단어 → 뜻 4지선다 카드형 풀이 화면이 기본이다.
 
-## 지금 상태 (프로토타입 v3)
+**로그인 한 번이면 폰·패드·PC 어디서든 같은 데이터가 보인다** — 이메일 매직링크 로그인 + Supabase 동기화.
 
-- **단일 파일** `index.html` — 프레임워크·빌드·서버 없이 브라우저에서 바로 열림.
-- **저장**: `localStorage` (이 브라우저에만 저장. 로그인·서버 불필요).
+## 지금 상태
+
+- **단일 파일** `index.html` — 프레임워크·빌드·번들러 없이 브라우저에서 바로 열림. 의존성 0.
+- **크로스 기기 동기화**: 이메일 **매직링크** 로그인(비밀번호 없음) → Supabase(Postgres)에 저장 → 어느 기기서든 동일 데이터.
+  - `supabase-js`를 **CDN ESM 동적 import**로 로드 (정적 배포 그대로 유지, 빌드 불필요).
+  - 로그인 시 서버에서 pull, 변경 시 디바운스 mirror-push(upsert + 고아 삭제). Row Level Security로 내 데이터만 접근.
+- **오프라인 캐시**: `localStorage`는 마지막 상태를 즉시 보여주는 읽기 캐시로 유지(비로그인이면 단독 저장소).
 - **입력 방식 3가지**
   - 붙여넣기 (엑셀에서 두 열 복사 → 그대로 붙여넣기)
   - `.xlsx` 업로드 — **외부 라이브러리 없이** 브라우저 `DecompressionStream`으로 직접 파싱 (SheetJS 등 불필요)
@@ -37,6 +42,16 @@ npx serve .        # 또는  python3 -m http.server
 - **Cloudflare Pages**: 리포 연결
 
 빌드 스텝이 없으므로 프레임워크 프리셋은 "None / Static"으로 두면 된다.
+
+### 동기화 켜기 (선택)
+
+로그인·크로스 기기 동기화를 쓰려면 Supabase 프로젝트가 필요하다:
+
+1. `db/schema.sql`을 Supabase SQL Editor에 실행 (테이블 + RLS 생성).
+2. `index.html`의 `SUPA_URL` / `SUPA_KEY`를 본인 프로젝트 값(Project URL · publishable key)으로 교체. publishable 키는 공개돼도 안전(RLS가 보호).
+3. Supabase → Authentication → **URL Configuration**의 Site URL·Redirect URLs에 배포 주소를 등록.
+
+자세한 설계·절차는 `docs/SUPABASE.md`.
 
 ## 다음 단계
 

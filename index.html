@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="엑셀·CSV로 단어와 문제를 올려 4지선다로 외우는 학습 웹앱">
 <meta name="theme-color" content="#5a5be0">
-<title>암기훈련소</title>
+<title>amgiBBang · 암기빵</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🍞%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap">
@@ -256,7 +257,7 @@ input:focus,textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 
 <script>
 "use strict";
 /* =========================================================
-   암기훈련소  ·  single-file study quiz app
+   amgiBBang (암기빵)  ·  single-file study quiz app
    data persisted to localStorage (this browser only)
 ========================================================= */
 const LS_KEY = "amgi.db.v3";
@@ -358,7 +359,7 @@ function render(){
 function renderCrumb(){
   const c=$("#crumb");
   let h='<div class="crumb">';
-  h+='<div class="brand"><span class="dot"></span>암기훈련소 <small>DRILL</small></div>';
+  h+='<div class="brand"><span class="dot"></span>amgiBBang <small>암기빵</small></div>';
   if(route.view==="cat"){
     const cat=findCat(route.catId);
     h+='<span class="sep">/</span><button data-nav="home">홈</button>';
