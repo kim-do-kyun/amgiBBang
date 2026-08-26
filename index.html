@@ -1,0 +1,1305 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="엑셀·CSV로 단어와 문제를 올려 4지선다로 외우는 학습 웹앱">
+<meta name="theme-color" content="#5a5be0">
+<title>암기훈련소</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+:root{
+  --bg:#f5f6fa; --panel:#ffffff; --panel-2:#fbfbfe;
+  --ink:#1b1c26; --muted:#6a6c7d; --faint:#9a9cad;
+  --line:#e9eaf1; --line-2:#dfe0ea;
+  --accent:#5a5be0; --accent-soft:#ececfb; --accent-ink:#4344c9;
+  --good:#1f9d62; --good-soft:#e5f5ec;
+  --bad:#e0403f; --bad-soft:#fceceb;
+  --star:#f4b740;
+  --shadow:0 1px 2px rgba(24,25,45,.05),0 8px 26px rgba(24,25,45,.06);
+  --shadow-lg:0 12px 44px rgba(24,25,45,.14);
+  --r:16px; --r-sm:12px;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#131319; --panel:#1d1e26; --panel-2:#232430;
+    --ink:#ecedf4; --muted:#a2a4b6; --faint:#71738a;
+    --line:#2b2c39; --line-2:#353747;
+    --accent:#8a8bf2; --accent-soft:#26263a; --accent-ink:#b9b9fb;
+    --good:#3fbd7e; --good-soft:#17301f;
+    --bad:#f0605f; --bad-soft:#331919;
+    --star:#f5c25b;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
+    --shadow-lg:0 16px 50px rgba(0,0,0,.55);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#131319; --panel:#1d1e26; --panel-2:#232430;
+  --ink:#ecedf4; --muted:#a2a4b6; --faint:#71738a;
+  --line:#2b2c39; --line-2:#353747;
+  --accent:#8a8bf2; --accent-soft:#26263a; --accent-ink:#b9b9fb;
+  --good:#3fbd7e; --good-soft:#17301f;
+  --bad:#f0605f; --bad-soft:#331919;
+  --star:#f5c25b;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
+  --shadow-lg:0 16px 50px rgba(0,0,0,.55);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"Noto Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  -webkit-font-smoothing:antialiased; line-height:1.5;
+  min-height:100vh;
+}
+.mono{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+button:focus-visible,[tabindex]:focus-visible,input:focus-visible,label:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+h1,h2,h3{margin:0;text-wrap:balance}
+::selection{background:var(--accent-soft)}
+.wrap{max-width:860px;margin:0 auto;padding:0 20px}
+
+/* ---------- top bar ---------- */
+.topbar{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.topbar .row{display:flex;align-items:center;gap:14px;height:60px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:17px;letter-spacing:-.01em}
+.brand .dot{width:11px;height:11px;border-radius:3px;background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+.brand small{font-weight:700;color:var(--faint);font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+.spacer{flex:1}
+.icon-btn{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;color:var(--muted);border:1px solid transparent}
+.icon-btn:hover{background:var(--panel);border-color:var(--line);color:var(--ink)}
+.crumb{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:14px;min-width:0}
+.crumb button{color:var(--muted);font-weight:600}
+.crumb button:hover{color:var(--ink)}
+.crumb .cur{color:var(--ink);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crumb .sep{color:var(--faint)}
+
+/* ---------- generic ---------- */
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);font-weight:700}
+.section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin:34px 0 16px}
+.section-head h2{font-size:20px;letter-spacing:-.02em}
+.btn{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:14px;padding:10px 16px;border-radius:11px;border:1px solid var(--line-2);background:var(--panel);color:var(--ink);transition:transform .06s,background .15s,border-color .15s}
+.btn:hover{border-color:var(--accent);color:var(--accent-ink)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent-ink);color:#fff}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+.btn.ghost:hover{color:var(--ink);background:var(--panel)}
+.btn.sm{padding:7px 12px;font-size:13px;border-radius:9px}
+.btn.danger:hover{border-color:var(--bad);color:var(--bad)}
+
+/* ---------- home: category cards ---------- */
+.grid{display:grid;gap:14px}
+.cat-grid{grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+.cat-card{position:relative;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:20px;box-shadow:var(--shadow);transition:transform .12s,border-color .15s;overflow:hidden}
+.cat-card:hover{transform:translateY(-3px);border-color:var(--accent)}
+.cat-card .emoji{font-size:26px;line-height:1;filter:saturate(1.05)}
+.cat-card h3{font-size:18px;margin-top:14px;letter-spacing:-.01em}
+.cat-card .meta{margin-top:6px;color:var(--muted);font-size:13px}
+.cat-card .bar{margin-top:16px;height:6px;border-radius:99px;background:var(--line);overflow:hidden}
+.cat-card .bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.cat-card .del{position:absolute;top:12px;right:12px;opacity:0;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;color:var(--faint)}
+.cat-card:hover .del{opacity:1}
+.cat-card .del:hover{background:var(--bad-soft);color:var(--bad)}
+.add-card{border:1.5px dashed var(--line-2);background:transparent;border-radius:var(--r);padding:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--muted);min-height:150px;font-weight:700}
+.add-card:hover{border-color:var(--accent);color:var(--accent-ink);background:var(--panel-2)}
+.add-card .plus{font-size:26px;line-height:1;font-weight:400}
+
+/* ---------- deck rows ---------- */
+.deck{display:flex;align-items:center;gap:16px;text-align:left;width:100%;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-sm);padding:16px 18px;box-shadow:var(--shadow);transition:border-color .15s,transform .1s}
+.deck:hover{border-color:var(--accent);transform:translateY(-2px)}
+.deck .kind{flex:none;width:44px;height:44px;border-radius:11px;display:grid;place-items:center;font-size:12px;font-weight:800;letter-spacing:.02em}
+.kind.vocab{background:var(--accent-soft);color:var(--accent-ink)}
+.kind.quiz{background:var(--good-soft);color:var(--good)}
+.deck .info{flex:1;min-width:0}
+.deck .info h3{font-size:16px;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.deck .info .sub{color:var(--muted);font-size:13px;margin-top:3px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.deck .info .sub .mono{color:var(--faint)}
+.pill{font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--panel-2);border:1px solid var(--line);color:var(--muted)}
+.pill.good{background:var(--good-soft);color:var(--good);border-color:transparent}
+.deck .go{flex:none;color:var(--faint)}
+.deck-actions{flex:none;display:flex;gap:4px}
+.deck-actions .icon-btn{width:34px;height:34px}
+.mini-bar{flex:none;width:74px}
+.mini-bar .t{height:6px;border-radius:99px;background:var(--line);overflow:hidden}
+.mini-bar .t i{display:block;height:100%;background:var(--good);border-radius:99px}
+.mini-bar .n{font-size:10px;color:var(--faint);text-align:right;margin-top:4px}
+
+.empty{text-align:center;padding:56px 20px;color:var(--muted)}
+.empty .big{font-size:34px}
+.empty h3{margin:12px 0 6px;color:var(--ink)}
+
+/* ---------- modal ---------- */
+.scrim{position:fixed;inset:0;background:rgba(20,20,35,.5);backdrop-filter:blur(3px);z-index:60;display:flex;align-items:flex-start;justify-content:center;padding:28px 16px;overflow:auto}
+.modal{width:100%;max-width:600px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow-lg);overflow:hidden;margin:auto}
+.modal header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--line)}
+.modal header h3{font-size:16px}
+.modal .body{padding:20px}
+.modal .foot{display:flex;gap:10px;justify-content:flex-end;padding:16px 20px;border-top:1px solid var(--line);background:var(--panel-2)}
+.field{margin-bottom:16px}
+.field label{display:block;font-weight:700;font-size:13px;margin-bottom:7px}
+.field .hint{color:var(--muted);font-weight:400;font-size:12px;margin-top:5px;line-height:1.55}
+input[type=text]{width:100%;padding:11px 13px;border:1px solid var(--line-2);border-radius:10px;background:var(--panel-2);color:var(--ink);font-size:14px;font-family:inherit}
+textarea{width:100%;min-height:150px;padding:12px 13px;border:1px solid var(--line-2);border-radius:10px;background:var(--panel-2);color:var(--ink);font-size:13px;font-family:"JetBrains Mono",monospace;line-height:1.6;resize:vertical}
+input:focus,textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
+.seg{display:flex;gap:6px;background:var(--panel-2);border:1px solid var(--line);padding:4px;border-radius:12px}
+.seg button{flex:1;padding:9px;border-radius:9px;font-weight:700;font-size:13px;color:var(--muted)}
+.seg button[aria-pressed=true]{background:var(--panel);color:var(--accent-ink);box-shadow:var(--shadow)}
+.tabs{display:flex;gap:18px;border-bottom:1px solid var(--line);margin-bottom:16px}
+.tabs button{padding:0 0 10px;font-weight:700;font-size:14px;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button[aria-selected=true]{color:var(--ink);border-color:var(--accent)}
+.parsebox{margin-top:12px;padding:11px 13px;border-radius:10px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
+.parsebox.ok{background:var(--good-soft);color:var(--good)}
+.parsebox.warn{background:var(--bad-soft);color:var(--bad)}
+.parsebox.idle{background:var(--panel-2);color:var(--muted);border:1px solid var(--line)}
+.chip-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:4px}
+.check{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer}
+.check input{width:16px;height:16px;accent-color:var(--accent)}
+.link{color:var(--accent-ink);font-weight:700;font-size:13px;text-decoration:underline;text-underline-offset:2px}
+
+/* ---------- QUIZ PLAYER ---------- */
+.player{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column}
+.p-top{height:60px;display:flex;align-items:center;gap:16px;padding:0 20px}
+.progressline{position:absolute;left:0;right:0;top:0;height:4px;background:var(--line)}
+.progressline i{display:block;height:100%;background:var(--accent);width:0;transition:width .35s cubic-bezier(.4,0,.2,1)}
+.p-count{font-family:"JetBrains Mono",monospace;font-weight:700;font-size:15px;letter-spacing:.02em}
+.p-count b{color:var(--accent-ink)}
+.p-stage{flex:1;display:flex;align-items:center;justify-content:center;padding:16px 20px 8px;min-height:0}
+.card{width:100%;max-width:680px;background:var(--panel);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);padding:44px 32px;min-height:min(46vh,360px);display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;text-align:center}
+.card .star{position:absolute;top:18px;left:18px;width:40px;height:40px;border-radius:11px;display:grid;place-items:center;color:var(--faint);font-size:20px}
+.card .star:hover{background:var(--panel-2);color:var(--star)}
+.card .star.on{color:var(--star)}
+.card .qtag{position:absolute;top:22px;right:22px;font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--faint);letter-spacing:.08em}
+.prompt-word{font-size:clamp(32px,6vw,54px);font-weight:900;letter-spacing:-.02em;line-height:1.15}
+.prompt-q{font-size:clamp(19px,3.2vw,25px);font-weight:700;letter-spacing:-.01em;line-height:1.4;max-width:38ch}
+.prompt-sub{margin-top:14px;color:var(--faint);font-size:13px;font-family:"JetBrains Mono",monospace;letter-spacing:.1em;text-transform:uppercase}
+.p-choices{padding:8px 20px 10px;display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:720px;margin:0 auto;width:100%}
+.p-choices.stack{grid-template-columns:1fr}
+.choice{display:flex;align-items:center;gap:14px;text-align:left;background:var(--panel);border:1px solid var(--line-2);border-radius:14px;padding:16px 18px;font-size:15px;font-weight:600;line-height:1.35;transition:border-color .12s,background .12s,transform .06s;box-shadow:var(--shadow)}
+.choice:hover:not(:disabled){border-color:var(--accent);transform:translateY(-1px)}
+.choice .idx{flex:none;width:26px;height:26px;border-radius:8px;background:var(--panel-2);border:1px solid var(--line);display:grid;place-items:center;font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:700;color:var(--muted)}
+.choice.correct{border-color:var(--good);background:var(--good-soft)}
+.choice.correct .idx{background:var(--good);color:#fff;border-color:var(--good)}
+.choice.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.choice.wrong .idx{background:var(--bad);color:#fff;border-color:var(--bad)}
+.choice:disabled{cursor:default}
+.choice.dim{opacity:.5}
+.p-bottom{padding:6px 20px 22px;display:flex;justify-content:center}
+.dunno{color:var(--faint);font-weight:700;font-size:14px;padding:10px 18px;border-radius:10px}
+.dunno:hover{color:var(--muted);background:var(--panel)}
+.dunno .mono{font-size:12px}
+
+/* result */
+.result{width:100%;max-width:560px;margin:auto;text-align:center;padding:20px}
+.ring{width:150px;height:150px;margin:6px auto 18px;position:relative}
+.ring svg{transform:rotate(-90deg)}
+.ring .pct{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring .pct b{font-size:38px;font-weight:900;font-family:"JetBrains Mono",monospace;letter-spacing:-.02em}
+.ring .pct span{font-size:12px;color:var(--muted);font-weight:700}
+.result h2{font-size:24px;margin-bottom:6px}
+.result .tally{color:var(--muted);margin-bottom:22px}
+.result .tally b{color:var(--ink)}
+.result-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:26px}
+.review{text-align:left;border-top:1px solid var(--line);padding-top:18px}
+.review h4{font-size:13px;color:var(--muted);margin-bottom:12px;font-weight:700}
+.rev-item{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-bottom:9px}
+.rev-item .rq{font-weight:700;font-size:14px;margin-bottom:7px}
+.rev-item .ra{font-size:13px;display:flex;gap:7px;align-items:baseline}
+.rev-item .ra .tag{font-size:10px;font-weight:800;padding:1px 6px;border-radius:5px;flex:none;letter-spacing:.03em}
+.tag.g{background:var(--good-soft);color:var(--good)}
+.tag.r{background:var(--bad-soft);color:var(--bad)}
+
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:11px;font-weight:600;font-size:14px;box-shadow:var(--shadow-lg);opacity:0;transition:.25s;z-index:80;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.fade{animation:fade .3s ease}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:600px){
+  .p-choices{grid-template-columns:1fr}
+  .card{padding:34px 20px}
+  .section-head{margin-top:26px}
+}
+.hide{display:none!important}
+
+/* ---------- auth / sync ---------- */
+.authbox{display:flex;align-items:center;gap:8px}
+.authbox .acct-email{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.auth-off{font-size:11px;color:var(--faint);letter-spacing:.04em}
+.dot-sync{width:8px;height:8px;border-radius:99px;flex:none;background:var(--faint);transition:background .2s}
+.dot-sync.ok{background:var(--good)}
+.dot-sync.busy{background:var(--star);animation:pulse 1s ease-in-out infinite}
+.dot-sync.err{background:var(--bad)}
+.dot-sync.off{background:var(--faint)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@media (max-width:600px){ .authbox .acct-email{max-width:92px} }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="wrap row">
+    <div id="crumb"></div>
+    <div class="spacer"></div>
+    <div id="authBox" class="authbox"></div>
+    <button class="icon-btn" id="themeBtn" title="테마 전환" aria-label="테마 전환">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    </button>
+  </div>
+</div>
+
+<main class="wrap" id="view"></main>
+
+<div id="modalHost"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* =========================================================
+   암기훈련소  ·  single-file study quiz app
+   data persisted to localStorage (this browser only)
+========================================================= */
+const LS_KEY = "amgi.db.v3";
+const $ = (s,el=document)=>el.querySelector(s);
+const uid = ()=> Math.random().toString(36).slice(2,9);
+const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const shuffle = a => { a=a.slice(); for(let i=a.length-1;i>0;i--){const j=(Math.random()*(i+1))|0;[a[i],a[j]]=[a[j],a[i]];} return a; };
+
+/* ---------------- seed content (from 도균's own files) ---------------- */
+function seedDB(){
+  const toeicWords = [
+    ["scheme","계획, 제도"],["janitor","문지기, 관리인"],["appointment","약속, 예약"],
+    ["responsible","~에 대한 책임이 있는"],["warehouse","창고"],["invoice","청구서, 송장"],
+    ["refund","환불(하다)"],["merger","합병"],["tenant","세입자, 임차인"],
+    ["itinerary","여행 일정표"],["reimburse","배상하다, 상환하다"],["vacancy","결원, 공석"],
+    ["mandatory","의무적인, 필수의"],["prospective","장래의, 유망한"],["subsidiary","자회사"],
+    ["prompt","신속한; 촉진하다"]
+  ];
+  const review = [
+    ["The fan cowl doors are opened by:",["Hold open rods.","Spring actuators.","Load share grooves.","The PDOS."],3],
+    ["The forward lower engine mount attaches to the engine's:",["Intermediate case.","Fan case.","Thrust reverser doors.","Exhaust case."],0],
+    ["Pamb sensors are found on the:",["Fan cowl doors.","Strut.","Thrust reverser doors.","Inlet cowl.","Exhaust case."],0],
+    ["The seal drain tubes drain fuel and oil from engine components overboard through the:",["Exhaust nozzle.","The opening in the thrust reverser doors at the 6:00 position.","Fan case.","Exhaust plug."],1],
+    ["The engine station numbering system is used to:",["Standardize.","Abbreviate terms.","Find points in the gaspath.","Find points on the engine cases."],2],
+    ["Rotational energy for the main gearbox is received from the:",["Front of the N1 rotor.","Rear of the low compressor.","Front of the N2 compressor.","Rear of the high compressor."],2],
+    ["The number of stages in the low and high pressure compressor sections are:",["LPC: 3 stages; HPC: 9 stages.","LPC: 5 stages; HPC: 17 stages.","LPC: 7 stages; HPC: 11 stages.","LPC: 10 stages; HPC: 8 stages."],2],
+    ["The high compressor rotor comprises:",["11 disks bolted together.","8 major components.","14 stages.","Vanes and blades."],0],
+    ["The combustion chamber is a:",["Two-piece floatwall annular design.","One-piece annular design.","Multi-can annular design.","All of the above."],0],
+    ["The purpose of the angle gearbox is to:",["Drive the starter.","Give horsepower for the aircraft.","Power the aircraft hydraulic system.","Drive the main gearbox."],3],
+    ["The number of stages in the high pressure turbine is:",["1.","2.","3.","4."],1],
+    ["The EEC data entry plug:",["Is matched to the EEC.","Is matched to the engine.","Has the engine serial number stamped on it.","Increases indicated oil pressure at a constant N2."],1],
+    ["The EEC gives limit protection (fuel topping) for:",["N1, N2, and PB","N1, N2, and EGT","N1, PB, and EGT","N2, PB, and EGT"],0],
+    ["The EEC normally operates in the:",["N1 mode.","N2 mode.","EPR mode.","EGT mode."],2],
+    ["For split ship transportability, the EEC programming plug can be secured to a connector mounted to the:",["Diffuser case.","Exhaust case.","Left side of the gearbox.","Inlet cowl."],0],
+    ["The fuel heat system:",["Uses P3 to heat the fuel.","Uses P4 to heat the fuel.","Must be ON for all takeoffs and landings.","Is an automatic system whereby heat is transferred from the engine oil system."],3],
+    ["The servo fuel heater will:",["Heat metered fuel to the injectors.","Cool engine oil for the gearbox.","Prevent ice from contaminating torque motors and servos in the components.","Measure Tfuel."],2],
+    ["Before and during initial engine start, the:",["2.5 bleed valve should be closed.","2.9 bleed valves should be closed.","2.5 bleed valve should be open and the 2.9 bleed valves should be open.","2.5 bleed valve should be closed and the 2.9 bleed valves should be open."],2],
+    ["With the engine shutdown, the stator vane actuator is in the open position. This condition:",["Is normal on the PW4090 engine.","Indicates the fuel metering unit is defective.","Requires replacement of the stator vane actuator.","Could be caused by improper rigging of the unison rings."],0],
+    ["The 2.9 bleed valves are:",["Opened by spring load and closed by Ps3.","Opened by Ps3 and closed by spring load.","Opened by Ps3 and closed by 9th stage air.","Opened by 6th stage air and closed by Ps3."],0],
+    ["With the engine shutdown, the 2.5 bleed valve actuator piston rod should be in the:",["Aft position; the 2.5 bleed valve should be open.","Aft position; the 2.5 bleed valve should be closed.","Forward position; the 2.5 bleed valve should be open.","Forward position; the 2.5 bleed valve should be closed."],2],
+    ["Stator vane actuator rigging is checked with the actuator position(s):",["Full open.","Full closed.","Full open and full closed.","Full open (+6 degree) and full closed."],0],
+    ["Visual position indicators can be found on the:",["2.9 bleed valves.","2.9 bleed valve solenoids.","2.5 and stator vane actuators.","TVBC air valves."],3],
+    ["TVBC air valves A, B, and C are:",["Open only during cruise.","Open only during takeoff.","Spring-loaded open and pneumatically closed.","Spring-loaded closed and pneumatically opened."],2],
+    ["The primary input(s) used for control of the TVBC air valves is the:",["Altitude, N2 and HPT 2nd stage vane internal cavity temperature.","Thrust lever angle.","Reverser position.","EGT."],0],
+    ["The stage air used for turbine vane and blade cooling is:",["6th.","9th.","12th.","15th."],2],
+    ["The LPT/TBV system is used to reduce axial loads on the:",["Main gearbox.","No. 1 bearing.","Reverser position.","EGT probe."],1]
+  ];
+  const oil = [
+    ["In cruise, the primary coolant of IDG oil is:",["2.5 air.","Fan air.","Engine oil.","Engine fuel."],1],
+    ["At idle on ground, the typical position for valves on the IDG air/oil heat exchanger is:",["Closed.","Open.","Bypassed.","None of the above."],1],
+    ["If a main AC bus loses power, the backup power system supplies power to the related transfer bus.",["True","False"],0],
+    ["The backup generator inlet oil temperature is regulated at:",["93.3°C.","98.6°C.","121.0°C.","127.0°C."],0],
+    ["If a fire should occur, the EEC will schedule the backup generator air/oil heat exchanger valve to:",["Partially open.","Partially closed.","Fully open.","Fully closed."],3],
+    ["To cool backup generator oil, the backup generator system uses:",["Engine oil.","Engine fuel.","Fan air.","Fan air and 2.5 bleed air."],2]
+  ];
+  const starting = [
+    ["28 VDC starter solenoid power is controlled by an electronic relay found in the:",["Starter air valve.","Engine relay unit.","Supplemental control unit.","Backup generator."],1],
+    ["Starter cutout is automatic when engine N2 speed reaches:",["Idle N2.","30% N2.","45% N2.","Overspeed."],2],
+    ["For starter-assisted inflight starts, the starter air valve solenoid:",["Pulses to modulate airflow to the starter.","Magnetically locks closed.","Magnetically locks open.","Does none of the above."],0]
+  ];
+  const vDeck = (name,words)=>({id:uid(),name,type:"vocab",created:Date.now(),
+    items:words.map(w=>({q:w[0],a:w[1]})),fav:[],wrong:[],best:null});
+  const qDeck = (name,rows)=>({id:uid(),name,type:"quiz",created:Date.now(),
+    items:rows.map(r=>({q:r[0],choices:r[1],answer:r[2]})),fav:[],wrong:[],best:null});
+  return { cats:[
+    {id:uid(),name:"토익",emoji:"📘",decks:[ vDeck("샘플 단어장 (스크린샷 단어 포함)",toeicWords) ]},
+    {id:uid(),name:"항공",emoji:"✈️",decks:[
+      qDeck("PW4090 리뷰 문제 (교안)",review),
+      qDeck("오일 시스템",oil),
+      qDeck("스타팅",starting)
+    ]}
+  ]};
+}
+
+/* ---------------- persistence ---------------- */
+let DB;
+function load(){ try{const r=localStorage.getItem(LS_KEY);if(r)return JSON.parse(r);}catch(e){} return null; }
+function persistLocal(){ try{localStorage.setItem(LS_KEY,JSON.stringify(DB));}catch(e){ toast("저장 공간이 가득 찼어요"); } }
+// save() = local cache write + (if signed in) debounced cloud sync
+function save(){ persistLocal(); scheduleSync(); }
+DB = load() || seedDB();
+
+/* ---------------- routing / state ---------------- */
+let route = {view:"home", catId:null, deckId:null};
+const findCat = id => DB.cats.find(c=>c.id===id);
+const findDeck = (cat,id)=> cat && cat.decks.find(d=>d.id===id);
+
+function go(r){ route = Object.assign({}, route, r); render(); }
+
+/* ================= RENDER ================= */
+function render(){
+  renderCrumb();
+  const v=$("#view");
+  if(route.view==="home") v.innerHTML=homeHTML();
+  else if(route.view==="cat") v.innerHTML=catHTML();
+  v.classList.remove("fade"); void v.offsetWidth; v.classList.add("fade");
+}
+
+function renderCrumb(){
+  const c=$("#crumb");
+  let h='<div class="crumb">';
+  h+='<div class="brand"><span class="dot"></span>암기훈련소 <small>DRILL</small></div>';
+  if(route.view==="cat"){
+    const cat=findCat(route.catId);
+    h+='<span class="sep">/</span><button data-nav="home">홈</button>';
+    h+='<span class="sep">/</span><span class="cur">'+esc(cat?cat.name:"")+'</span>';
+  }
+  h+='</div>';
+  c.innerHTML=h;
+}
+
+function homeHTML(){
+  const totalDecks = DB.cats.reduce((n,c)=>n+c.decks.length,0);
+  const totalItems = DB.cats.reduce((n,c)=>n+c.decks.reduce((m,d)=>m+d.items.length,0),0);
+  let cards = DB.cats.map(c=>{
+    const decks=c.decks.length, items=c.decks.reduce((m,d)=>m+d.items.length,0);
+    const best = c.decks.length? Math.round(c.decks.reduce((m,d)=>m+(d.best||0),0)/c.decks.length):0;
+    return `<button class="cat-card" data-open-cat="${c.id}">
+      <span class="del" data-del-cat="${c.id}" title="삭제" role="button" tabindex="0">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2m-9 0v14a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6"/></svg>
+      </span>
+      <div class="emoji">${esc(c.emoji||"📚")}</div>
+      <h3>${esc(c.name)}</h3>
+      <div class="meta"><span class="mono">${decks}</span> 세트 · <span class="mono">${items}</span> 문항</div>
+      <div class="bar"><i style="width:${best}%"></i></div>
+    </button>`;
+  }).join("");
+  return `
+   <div class="section-head" style="margin-top:30px">
+     <div><div class="eyebrow">카테고리</div><h2>무엇을 외워볼까요?</h2></div>
+   </div>
+   <p style="color:var(--muted);margin:-6px 0 20px;font-size:14px">
+     엑셀·CSV 파일을 올리거나 붙여넣어 나만의 단어장과 문제를 만들고, 4지선다로 풀어보세요.
+     현재 <b class="mono">${totalDecks}</b>개 세트 · <b class="mono">${totalItems}</b>개 문항.
+   </p>
+   <div class="grid cat-grid">
+     ${cards}
+     <button class="add-card" data-add-cat><span class="plus">+</span>카테고리 추가</button>
+   </div>`;
+}
+
+function catHTML(){
+  const cat=findCat(route.catId);
+  if(!cat){ route.view="home"; return homeHTML(); }
+  let rows = cat.decks.map(d=>{
+    const isV=d.type==="vocab";
+    const best = d.best!=null? d.best : null;
+    const wrongN = (d.wrong||[]).length;
+    return `<button class="deck" data-play="${d.id}">
+      <span class="kind ${isV?'vocab':'quiz'}">${isV?'단어':'문제'}</span>
+      <span class="info">
+        <h3>${esc(d.name)}</h3>
+        <span class="sub">
+          <span class="mono">${d.items.length}</span> 문항
+          ${wrongN?`<span class="pill">오답 ${wrongN}</span>`:``}
+          ${best!=null?`<span class="pill good">최고 ${best}%</span>`:`<span class="pill">아직 안 풂</span>`}
+        </span>
+      </span>
+      ${best!=null?`<span class="mini-bar"><span class="t"><i style="width:${best}%"></i></span><span class="n mono">${best}%</span></span>`:``}
+      <span class="deck-actions">
+        <span class="icon-btn" data-edit="${d.id}" title="이름 변경" role="button" tabindex="0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span>
+        <span class="icon-btn" data-del-deck="${d.id}" title="삭제" role="button" tabindex="0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2m-9 0v14a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6"/></svg></span>
+      </span>
+    </button>`;
+  }).join("");
+  if(!cat.decks.length){
+    rows = `<div class="empty"><div class="big">📥</div><h3>아직 세트가 없어요</h3>
+      <p>엑셀·CSV를 올리거나 붙여넣어 첫 세트를 만들어 보세요.</p></div>`;
+  }
+  return `
+   <div class="section-head">
+     <div><div class="eyebrow">${esc(cat.name)}</div><h2>학습 세트</h2></div>
+     <button class="btn primary" data-new-deck><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> 세트 만들기</button>
+   </div>
+   <div class="grid" style="gap:11px">${rows}</div>`;
+}
+
+/* ================= EVENTS ================= */
+document.addEventListener("click", e=>{
+  const t=e.target.closest("[data-nav],[data-open-cat],[data-add-cat],[data-del-cat],[data-new-deck],[data-play],[data-edit],[data-del-deck]");
+  if(!t) return;
+  if(t.dataset.nav==="home") return go({view:"home",catId:null});
+  if(t.dataset.delCat!=null){ e.stopPropagation(); return delCat(t.dataset.delCat); }
+  if(t.dataset.openCat!=null) return go({view:"cat",catId:t.dataset.openCat});
+  if(t.hasAttribute("data-add-cat")) return addCatModal();
+  if(t.hasAttribute("data-new-deck")) return deckModal();
+  if(t.dataset.edit!=null){ e.stopPropagation(); return renameDeck(t.dataset.edit); }
+  if(t.dataset.delDeck!=null){ e.stopPropagation(); return delDeck(t.dataset.delDeck); }
+  if(t.dataset.play!=null) return startModal(t.dataset.play);
+});
+document.addEventListener("keydown",e=>{
+  const t=e.target;
+  if((e.key==="Enter"||e.key===" ")&&t.matches&&t.matches("[data-del-cat],[data-edit],[data-del-deck]")){ e.preventDefault(); t.click(); }
+});
+
+/* ---- theme toggle ---- */
+$("#themeBtn").addEventListener("click",()=>{
+  const cur=document.documentElement.getAttribute("data-theme");
+  const isDark = cur? cur==="dark" : matchMedia("(prefers-color-scheme:dark)").matches;
+  const next = isDark? "light":"dark";
+  document.documentElement.setAttribute("data-theme",next);
+  try{localStorage.setItem("amgi.theme",next);}catch(e){}
+});
+(function(){ try{const t=localStorage.getItem("amgi.theme"); if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){} })();
+
+/* ================= CATEGORY / DECK ops ================= */
+function addCatModal(){
+  openModal(`<header><h3>카테고리 추가</h3>${closeX()}</header>
+    <div class="body">
+      <div class="field"><label>이름</label><input type="text" id="cName" placeholder="예: 컴활, 운전면허, 스페인어" autofocus></div>
+      <div class="field"><label>아이콘 (이모지, 선택)</label><input type="text" id="cEmoji" placeholder="✈️" maxlength="4"></div>
+    </div>
+    <div class="foot"><button class="btn ghost" data-close>취소</button><button class="btn primary" id="cSave">추가</button></div>`);
+  $("#cSave").onclick=()=>{
+    const name=$("#cName").value.trim(); if(!name)return toast("이름을 입력하세요");
+    const emoji=$("#cEmoji").value.trim()||"📚";
+    DB.cats.push({id:uid(),name,emoji,decks:[]}); save(); closeModal(); render();
+  };
+}
+function delCat(id){
+  const c=findCat(id); if(!c)return;
+  confirmModal(`"${esc(c.name)}" 카테고리를 삭제할까요?`, `세트 ${c.decks.length}개가 함께 삭제됩니다.`,()=>{
+    DB.cats=DB.cats.filter(x=>x.id!==id); save();
+    if(route.catId===id) route={view:"home"};
+    closeModal(); render();
+  });
+}
+function delDeck(id){
+  const cat=findCat(route.catId); const d=findDeck(cat,id); if(!d)return;
+  confirmModal(`"${esc(d.name)}" 세트를 삭제할까요?`,"이 작업은 되돌릴 수 없습니다.",()=>{
+    cat.decks=cat.decks.filter(x=>x.id!==id); save(); closeModal(); render();
+  });
+}
+function renameDeck(id){
+  const cat=findCat(route.catId); const d=findDeck(cat,id); if(!d)return;
+  openModal(`<header><h3>이름 변경</h3>${closeX()}</header>
+    <div class="body"><div class="field"><label>세트 이름</label><input type="text" id="rn" value="${esc(d.name)}" autofocus></div></div>
+    <div class="foot"><button class="btn ghost" data-close>취소</button><button class="btn primary" id="rnOk">저장</button></div>`);
+  $("#rnOk").onclick=()=>{ const v=$("#rn").value.trim(); if(v){d.name=v;save();closeModal();render();} };
+}
+
+/* ================= CREATE DECK (upload / paste) ================= */
+let deckDraft = {type:"vocab", method:"paste", items:[]};
+function deckModal(){
+  deckDraft={type:"vocab",method:"paste",items:[]};
+  openModal(`
+   <header><h3>새 학습 세트</h3>${closeX()}</header>
+   <div class="body">
+     <div class="field">
+       <label>종류</label>
+       <div class="seg" id="typeSeg">
+         <button data-type="vocab" aria-pressed="true">단어장 &nbsp;<span class="mono" style="font-weight:400;font-size:11px">단어 → 뜻</span></button>
+         <button data-type="quiz" aria-pressed="false">객관식 문제 &nbsp;<span class="mono" style="font-weight:400;font-size:11px">A·B·C·D</span></button>
+       </div>
+     </div>
+     <div class="field"><label>세트 이름</label><input type="text" id="dName" placeholder="예: DAY 08 필수어휘"></div>
+     <div class="tabs" id="methTabs">
+       <button data-m="paste" aria-selected="true">붙여넣기</button>
+       <button data-m="file" aria-selected="false">엑셀 · CSV 파일</button>
+     </div>
+     <div id="methBody"></div>
+     <div class="parsebox idle" id="pbox">아래에 입력하면 자동으로 인식됩니다.</div>
+   </div>
+   <div class="foot">
+     <button class="btn ghost" data-close>취소</button>
+     <button class="btn primary" id="dCreate" disabled>세트 만들기</button>
+   </div>`);
+  $("#typeSeg").addEventListener("click",e=>{
+    const b=e.target.closest("[data-type]"); if(!b)return;
+    deckDraft.type=b.dataset.type;
+    [...$("#typeSeg").children].forEach(x=>x.setAttribute("aria-pressed",x===b));
+    renderMethod(); reparse();
+  });
+  $("#methTabs").addEventListener("click",e=>{
+    const b=e.target.closest("[data-m]"); if(!b)return;
+    deckDraft.method=b.dataset.m;
+    [...$("#methTabs").children].forEach(x=>x.setAttribute("aria-selected",x===b));
+    renderMethod(); reparse();
+  });
+  $("#dCreate").onclick=createDeck;
+  renderMethod();
+}
+
+function renderMethod(){
+  const host=$("#methBody"); const isV=deckDraft.type==="vocab";
+  if(deckDraft.method==="paste"){
+    const ph = isV
+      ? "scheme\t계획\njanitor\t문지기, 관리인\nappointment\t약속, 예약\n\n(한 줄에 하나 · 단어와 뜻은 탭 또는 콤마로 구분)"
+      : "1. The EEC normally operates in the:\nA. N1 mode.\nB. N2 mode.\n*C. EPR mode.\nD. EGT mode.\n\n(정답 보기 앞에 * 를 붙이거나, 문제 아래 '정답: C' 로 표시)";
+    host.innerHTML=`<div class="field" style="margin-bottom:6px">
+        <textarea id="pasteArea" placeholder="${esc(ph)}"></textarea>
+        <div class="hint">
+          ${isV
+            ? `엑셀에서 두 열(단어 · 뜻)을 복사해 그대로 붙여넣어도 됩니다. `
+            : `PDF·교안에서 문제를 복사해 붙여넣으세요. 정답은 <b>보기 앞 <code>*</code></b> 또는 <b><code>정답: C</code></b> 줄로 표시합니다. `}
+          <a class="link" id="fillEx">예시 채우기</a>
+        </div>
+      </div>`;
+    $("#pasteArea").addEventListener("input",reparse);
+    $("#fillEx").onclick=()=>{ $("#pasteArea").value = isV? EX_VOCAB : EX_QUIZ; reparse(); };
+  } else {
+    host.innerHTML=`<div class="field" style="margin-bottom:6px">
+        <label class="add-card" style="min-height:118px;cursor:pointer" for="fileIn" tabindex="0">
+          <span class="plus">⬆</span>
+          <span>클릭해서 파일 선택 <span style="color:var(--faint);font-weight:400">(.xlsx · .csv · .txt)</span></span>
+          <span id="fileName" class="mono" style="font-size:12px;color:var(--faint)"></span>
+        </label>
+        <input id="fileIn" type="file" accept=".xlsx,.csv,.txt,.tsv" class="hide">
+        <div class="hint">
+          ${isV
+            ? `열 순서: <b>1열 = 단어, 2열 = 뜻</b>. 첫 줄이 머리글이면 자동으로 건너뜁니다.`
+            : `열 순서: <b>문제 · 보기A · 보기B · 보기C · 보기D · 정답</b>. 정답 칸은 <code>A~E</code> 또는 <code>1~5</code> 또는 정답 문장 그대로.`}
+        </div>
+      </div>`;
+    $("#fileIn").addEventListener("change",onFile);
+  }
+}
+
+/* ---- example fillers ---- */
+const EX_VOCAB="prompt\t신속한; 촉진하다\ntenant\t세입자, 임차인\nreimburse\t배상하다, 상환하다\nvacancy\t결원, 공석";
+const EX_QUIZ="1. The number of stages in the high pressure turbine is:\nA. 1.\n*B. 2.\nC. 3.\nD. 4.\n\n2. The EEC data entry plug:\nA. Is matched to the EEC.\nB. Is matched to the engine.\n정답: B";
+
+/* ================= PARSERS ================= */
+function parseCSV(text){
+  const rows=[]; let row=[],cur="",q=false;
+  for(let i=0;i<text.length;i++){const ch=text[i];
+    if(q){ if(ch==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=ch; }
+    else { if(ch==='"')q=true;
+      else if(ch===","){row.push(cur);cur="";}
+      else if(ch==="\t"){row.push(cur);cur="";}
+      else if(ch==="\r"){}
+      else if(ch==="\n"){row.push(cur);rows.push(row);row=[];cur="";}
+      else cur+=ch; } }
+  if(cur.length||row.length){row.push(cur);rows.push(row);}
+  return rows.filter(r=>r.some(c=>String(c).trim()!==""));
+}
+// vocab PASTE -> items. Split per line on the FIRST delimiter only, so that
+// commas inside a Korean meaning ("문지기, 관리인") are preserved.
+function parseVocabPaste(text){
+  const items=[];
+  text.split(/\r?\n/).forEach((line,idx)=>{
+    line=line.replace(/\r/g,"").trim();
+    if(!line) return;
+    let word,mean;
+    if(line.includes("\t")){ const i=line.indexOf("\t"); word=line.slice(0,i).trim(); mean=line.slice(i+1).replace(/\t/g,", ").trim(); }
+    else { const i=line.indexOf(","); if(i<0) return; word=line.slice(0,i).trim(); mean=line.slice(i+1).trim(); }
+    if(idx===0 && /^(단어|word|english|영어|표제어?)$/i.test(word) && /(뜻|meaning|의미|한글|kor)/i.test(mean)) return;
+    if(word&&mean) items.push({q:word,a:mean});
+  });
+  return items;
+}
+// vocab rows (from a real .xlsx grid) -> items ; 2-col table (word, meaning)
+function rowsToVocab(rows){
+  let start=0;
+  const h=(rows[0]||[]).map(c=>String(c).trim().toLowerCase());
+  if(h.length && /단어|word|english|영어|표제/.test(h[0]) && /뜻|meaning|kor|한글|의미/.test(h[1]||"")) start=1;
+  const items=[];
+  for(let i=start;i<rows.length;i++){
+    const r=rows[i]; if(!r)continue;
+    const w=String(r[0]||"").trim(); const m=String(r[1]!=null?r[1]:"").trim();
+    if(w&&m) items.push({q:w,a:m});
+  }
+  return items;
+}
+// quiz rows (structured columns) -> items
+function rowsToQuiz(rows){
+  let start=0;
+  const h=(rows[0]||[]).map(c=>String(c).trim().toLowerCase());
+  const hasHeader = h.some(c=>/정답|answer|ans|해답/.test(c)) || /문제|question|지문/.test(h[0]||"");
+  if(hasHeader) start=1;
+  const items=[];
+  for(let i=start;i<rows.length;i++){
+    const r=(rows[i]||[]).map(c=>String(c==null?"":c).trim());
+    if(!r.length) continue;
+    const q=r[0]; if(!q) continue;
+    // choices = columns 1..n-1 that are non-empty, last non-empty col is answer key
+    const rest=r.slice(1).filter(c=>c!=="");
+    if(rest.length<2) continue;
+    const ansRaw=rest[rest.length-1];
+    const choices=rest.slice(0,rest.length-1);
+    let ans=resolveAnswer(ansRaw,choices);
+    if(ans<0){ // maybe answer wasn't a separate col; skip
+      continue;
+    }
+    items.push({q,choices,answer:ans});
+  }
+  return items;
+}
+function resolveAnswer(raw,choices){
+  raw=String(raw).trim();
+  let m=raw.match(/^([A-Ea-e])[.)]?$/); if(m){ const i="abcde".indexOf(m[1].toLowerCase()); if(i<choices.length)return i; }
+  m=raw.match(/^([1-9])[.)]?$/); if(m){ const i=+m[1]-1; if(i>=0&&i<choices.length)return i; }
+  // full-text match
+  const norm=s=>String(s).replace(/[.\s]+$/,"").trim().toLowerCase();
+  const idx=choices.findIndex(c=>norm(c)===norm(raw)); if(idx>=0)return idx;
+  const idx2=choices.findIndex(c=>norm(c).includes(norm(raw))&&norm(raw).length>1); if(idx2>=0)return idx2;
+  return -1;
+}
+// quiz from free numbered text (pasted from PDF/교안)
+function textToQuiz(text){
+  const lines=text.split(/\r?\n/);
+  const items=[]; let cur=null; let pendingAns=null;
+  const flush=()=>{ if(cur&&cur.choices.length>=2){
+      if(cur.answer<0 && pendingAns) cur.answer=resolveAnswer(pendingAns,cur.choices);
+      if(cur.answer<0) cur.answer=0;
+      items.push(cur);
+    } cur=null; pendingAns=null; };
+  for(let raw of lines){
+    const line=raw.replace(/ /g," ").trim();
+    if(!line){ continue; }
+    let m=line.match(/^정답\s*[:：]\s*(.+)$/i)||line.match(/^answer\s*[:：]\s*(.+)$/i);
+    if(m){ pendingAns=m[1].trim(); continue; }
+    // choice line: A. / A) / (A) / * A.
+    m=line.match(/^(\*?)\s*\(?([A-Ea-e])\)?[.)]\s+(.*\S)\s*$/);
+    if(m && cur){
+      const star=m[1]==="*"; const txt=m[3].replace(/\s*\*\s*$/,"").trim();
+      const starred = star || /\*$/.test(m[3].trim());
+      cur.choices.push(txt);
+      if(starred) cur.answer=cur.choices.length-1;
+      continue;
+    }
+    // question line: "1." "1)" "12."
+    m=line.match(/^\(?(\d{1,3})\)?[.)]\s+(.*\S)\s*$/);
+    if(m){ flush(); cur={q:m[2].trim(),choices:[],answer:-1}; continue; }
+    // continuation of question stem (no choices yet)
+    if(cur && cur.choices.length===0){ cur.q+=" "+line; }
+  }
+  flush();
+  return items;
+}
+
+function currentInputText(){ const a=$("#pasteArea"); return a? a.value : ""; }
+function reparse(){
+  let items=[];
+  if(deckDraft.method==="paste"){
+    const text=currentInputText();
+    if(deckDraft.type==="vocab") items=parseVocabPaste(text);
+    else {
+      // try structured table first; if weak, fall back to numbered text
+      const tbl=rowsToQuiz(parseCSV(text));
+      const txt=textToQuiz(text);
+      items = txt.length>=tbl.length? txt : tbl;
+    }
+  } else items = deckDraft.items;
+  deckDraft.items=items;
+  updateParseBox(items);
+}
+function updateParseBox(items){
+  const box=$("#pbox"), btn=$("#dCreate"); if(!box)return;
+  if(!items.length){ box.className="parsebox idle"; box.textContent="아직 인식된 항목이 없어요."; if(btn)btn.disabled=true; return; }
+  if(deckDraft.type==="vocab"){
+    box.className="parsebox ok";
+    box.innerHTML=`✓ 단어 <b>${items.length}</b>개 인식됨 &nbsp;·&nbsp; 예: <b>${esc(items[0].q)}</b> → ${esc(items[0].a)}`;
+  } else {
+    const noAns=items.filter(x=>x.answer===0 && x.__guessed).length;
+    box.className="parsebox ok";
+    box.innerHTML=`✓ 문제 <b>${items.length}</b>개 인식됨 &nbsp;·&nbsp; 평균 보기 ${(items.reduce((n,x)=>n+x.choices.length,0)/items.length).toFixed(1)}개`;
+  }
+  if(btn) btn.disabled=false;
+}
+
+async function onFile(e){
+  const f=e.target.files[0]; if(!f)return;
+  $("#fileName").textContent=f.name;
+  const box=$("#pbox"); box.className="parsebox idle"; box.textContent="파일 읽는 중…";
+  try{
+    const isXlsx=/\.xlsx$/i.test(f.name);
+    let items;
+    if(deckDraft.type==="vocab"){
+      // xlsx -> real grid cells; text (csv/tsv/txt) -> first-delimiter line parse
+      // so commas inside a meaning survive.
+      items = isXlsx ? rowsToVocab(await readXlsx(await f.arrayBuffer()))
+                     : parseVocabPaste(await f.text());
+    } else {
+      const rows = isXlsx ? await readXlsx(await f.arrayBuffer()) : parseCSV(await f.text());
+      items = rowsToQuiz(rows);
+      if(items.length===0) items = textToQuiz(rows.map(r=>r.join(" ")).join("\n"));
+    }
+    deckDraft.items=items;
+    if(!$("#dName").value.trim()) $("#dName").value=f.name.replace(/\.(xlsx|csv|txt|tsv)$/i,"");
+    updateParseBox(items);
+  }catch(err){
+    box.className="parsebox warn"; box.textContent="파일을 읽지 못했어요. CSV로 저장하거나 붙여넣기를 사용해 보세요.";
+    console.error(err);
+  }
+}
+
+function createDeck(){
+  const cat=findCat(route.catId); if(!cat)return;
+  const items=deckDraft.items;
+  if(!items.length) return toast("인식된 항목이 없어요");
+  if(deckDraft.type==="vocab" && items.length<4) return toast("4지선다를 만들려면 단어가 4개 이상 필요해요");
+  let name=($("#dName").value||"").trim() || (deckDraft.type==="vocab"?"새 단어장":"새 문제 세트");
+  cat.decks.push({id:uid(),name,type:deckDraft.type,created:Date.now(),items,fav:[],wrong:[],best:null});
+  save(); closeModal(); render(); toast("세트가 추가됐어요 ✓");
+}
+
+/* ================= XLSX reader (no external lib) ================= */
+async function inflateRaw(bytes){
+  if(typeof DecompressionStream==="undefined") throw new Error("no DecompressionStream");
+  const ds=new DecompressionStream("deflate-raw");
+  const stream=new Response(new Blob([bytes]).stream().pipeThrough(ds));
+  return new Uint8Array(await stream.arrayBuffer());
+}
+async function readXlsx(buf){
+  const dv=new DataView(buf); const bytes=new Uint8Array(buf);
+  // find End of Central Directory
+  let eocd=-1;
+  for(let i=bytes.length-22;i>=0;i--){ if(dv.getUint32(i,true)===0x06054b50){eocd=i;break;} }
+  if(eocd<0) throw new Error("not a zip");
+  const cdCount=dv.getUint16(eocd+10,true);
+  let off=dv.getUint32(eocd+16,true);
+  const files={};
+  for(let n=0;n<cdCount;n++){
+    if(dv.getUint32(off,true)!==0x02014b50) break;
+    const method=dv.getUint16(off+10,true);
+    const compSize=dv.getUint32(off+20,true);
+    const nameLen=dv.getUint16(off+28,true);
+    const extraLen=dv.getUint16(off+30,true);
+    const commLen=dv.getUint16(off+32,true);
+    const localOff=dv.getUint32(off+42,true);
+    const name=new TextDecoder().decode(bytes.subarray(off+46,off+46+nameLen));
+    files[name]={method,compSize,localOff};
+    off+=46+nameLen+extraLen+commLen;
+  }
+  async function extract(name){
+    const f=files[name]; if(!f)return null;
+    const lh=f.localOff;
+    if(dv.getUint32(lh,true)!==0x04034b50) return null;
+    const nLen=dv.getUint16(lh+26,true); const eLen=dv.getUint16(lh+28,true);
+    const dataStart=lh+30+nLen+eLen;
+    const raw=bytes.subarray(dataStart,dataStart+f.compSize);
+    const out = f.method===0? raw : await inflateRaw(raw);
+    return new TextDecoder().decode(out);
+  }
+  // shared strings
+  const shared=[]; const ssXml=await extract("xl/sharedStrings.xml");
+  if(ssXml){
+    const re=/<si>([\s\S]*?)<\/si>/g; let m;
+    while((m=re.exec(ssXml))){
+      const ts=[...m[1].matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map(x=>x[1]);
+      shared.push(unxml(ts.join("")));
+    }
+  }
+  // first worksheet
+  const wbXml=await extract("xl/workbook.xml");
+  let sheetPath="xl/worksheets/sheet1.xml";
+  // resolve first sheet via rels (best-effort; default is fine for most)
+  const sheetXml=await extract(sheetPath) || await extract("xl/worksheets/sheet01.xml");
+  if(!sheetXml) throw new Error("no sheet");
+  const rows=[];
+  const rowRe=/<row[^>]*>([\s\S]*?)<\/row>/g; let rm;
+  while((rm=rowRe.exec(sheetXml))){
+    const cells=[]; const cRe=/<c([^>]*)>([\s\S]*?)<\/c>|<c([^>]*)\/>/g; let cm;
+    while((cm=cRe.exec(rm[1]))){
+      const attr=(cm[1]||cm[3]||""); const inner=cm[2]||"";
+      const ref=(attr.match(/r="([A-Z]+)\d+"/)||[])[1];
+      const type=(attr.match(/t="([^"]+)"/)||[])[1];
+      let val="";
+      const vM=inner.match(/<v[^>]*>([\s\S]*?)<\/v>/);
+      const isM=inner.match(/<t[^>]*>([\s\S]*?)<\/t>/); // inline string
+      if(type==="s" && vM){ val=shared[+vM[1]]||""; }
+      else if(type==="inlineStr" && isM){ val=unxml(isM[1]); }
+      else if(vM){ val=unxml(vM[1]); }
+      const col=ref?colNum(ref):cells.length;
+      cells[col]=val;
+    }
+    for(let i=0;i<cells.length;i++) if(cells[i]==null)cells[i]="";
+    rows.push(cells);
+  }
+  return rows.filter(r=>r.some(c=>String(c).trim()!==""));
+}
+function colNum(ref){ let n=0; for(const ch of ref){ n=n*26+(ch.charCodeAt(0)-64);} return n-1; }
+function unxml(s){ return String(s).replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&#(\d+);/g,(_,d)=>String.fromCharCode(+d)).replace(/&amp;/g,"&"); }
+
+/* ================= START MODAL ================= */
+let startOpts={mode:"all", dir:"qa", shuffle:true, count:0};
+function startModal(deckId){
+  const cat=findCat(route.catId); const d=findDeck(cat,deckId); if(!d)return;
+  const isV=d.type==="vocab"; const favN=(d.fav||[]).length; const wrongN=(d.wrong||[]).length;
+  startOpts={mode:"all",dir:"qa",shuffle:true,count:0,deckId};
+  openModal(`<header><h3>${esc(d.name)}</h3>${closeX()}</header>
+    <div class="body">
+      <p style="color:var(--muted);font-size:14px;margin:-2px 0 16px">
+        총 <b class="mono">${d.items.length}</b>문항${isV?" 단어":""} · 4지선다로 진행합니다.
+      </p>
+      <div class="field">
+        <label>범위</label>
+        <div class="seg" id="modeSeg">
+          <button data-mode="all" aria-pressed="true">전체</button>
+          <button data-mode="wrong" aria-pressed="false" ${wrongN?'':'disabled style=opacity:.4'}>오답만 ${wrongN?`(${wrongN})`:''}</button>
+          <button data-mode="fav" aria-pressed="false" ${favN?'':'disabled style=opacity:.4'}>⭐ 즐겨찾기 ${favN?`(${favN})`:''}</button>
+        </div>
+      </div>
+      ${isV?`<div class="field">
+        <label>출제 방향</label>
+        <div class="seg" id="dirSeg">
+          <button data-dir="qa" aria-pressed="true">단어 → 뜻</button>
+          <button data-dir="aq" aria-pressed="false">뜻 → 단어</button>
+        </div>
+      </div>`:``}
+      <div class="chip-row">
+        <label class="check"><input type="checkbox" id="shuf" checked> 순서 섞기</label>
+      </div>
+    </div>
+    <div class="foot"><button class="btn ghost" data-close>취소</button>
+      <button class="btn primary" id="startBtn">시작하기 →</button></div>`);
+  $("#modeSeg").addEventListener("click",e=>{const b=e.target.closest("[data-mode]");if(!b||b.disabled)return;startOpts.mode=b.dataset.mode;[...$("#modeSeg").children].forEach(x=>x.setAttribute("aria-pressed",x===b));});
+  if(isV)$("#dirSeg").addEventListener("click",e=>{const b=e.target.closest("[data-dir]");if(!b)return;startOpts.dir=b.dataset.dir;[...$("#dirSeg").children].forEach(x=>x.setAttribute("aria-pressed",x===b));});
+  $("#startBtn").onclick=()=>{ startOpts.shuffle=$("#shuf").checked; closeModal(); launchQuiz(d); };
+}
+
+/* ================= QUIZ ENGINE ================= */
+let Q=null;
+function launchQuiz(deck){
+  // build index list per mode
+  let idxs = deck.items.map((_,i)=>i);
+  if(startOpts.mode==="wrong") idxs=idxs.filter(i=>(deck.wrong||[]).includes(i));
+  if(startOpts.mode==="fav")  idxs=idxs.filter(i=>(deck.fav||[]).includes(i));
+  if(!idxs.length){ toast("해당 범위에 문항이 없어요"); return; }
+  if(startOpts.shuffle) idxs=shuffle(idxs);
+  Q={ deck, idxs, pos:0, correct:0, wrong:[], answered:false,
+      dir:startOpts.dir, isV:deck.type==="vocab" };
+  mountPlayer(); renderQuestion();
+  document.addEventListener("keydown",keyHandler);
+}
+function mountPlayer(){
+  const host=$("#modalHost");
+  host.innerHTML=`<div class="player" id="player">
+    <div class="progressline"><i id="pgl"></i></div>
+    <div class="p-top">
+      <button class="icon-btn" id="quitBtn" title="나가기" aria-label="나가기">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+      <div class="spacer"></div>
+      <div class="p-count" id="pcount"></div>
+      <div class="spacer"></div>
+      <div style="width:38px"></div>
+    </div>
+    <div id="pmain" style="flex:1;display:flex;flex-direction:column;min-height:0"></div>
+  </div>`;
+  $("#quitBtn").onclick=quitQuiz;
+}
+function quitQuiz(){
+  document.removeEventListener("keydown",keyHandler);
+  $("#modalHost").innerHTML=""; Q=null; render();
+}
+function renderQuestion(){
+  const {deck,idxs,pos,isV,dir}=Q;
+  const item=deck.items[idxs[pos]];
+  Q.answered=false;
+  $("#pgl").style.width=(pos/idxs.length*100)+"%";
+  $("#pcount").innerHTML=`<b>${pos+1}</b> / ${idxs.length}`;
+  // build prompt + choices
+  let promptHTML, choices, correctIdx;
+  if(isV){
+    const askWord = dir==="qa"; // show word, ask meaning
+    const prompt = askWord? item.q : item.a;
+    const answer = askWord? item.a : item.q;
+    // distractors from other items' (same field as answer)
+    const pool = deck.items.map(it=> askWord? it.a : it.q).filter(x=>x!==answer);
+    const distract = shuffle([...new Set(pool)]).slice(0,3);
+    const opts = shuffle([answer,...distract]);
+    correctIdx = opts.indexOf(answer);
+    choices=opts;
+    promptHTML=`<div class="prompt-word">${esc(prompt)}</div>
+      <div class="prompt-sub">${askWord?"알맞은 뜻은?":"알맞은 단어는?"}</div>`;
+  } else {
+    const order = Q.shufChoices!==false ? shuffle(item.choices.map((c,i)=>i)) : item.choices.map((c,i)=>i);
+    choices = order.map(i=>item.choices[i]);
+    correctIdx = order.indexOf(item.answer);
+    promptHTML=`<div class="prompt-q">${esc(item.q)}</div>`;
+  }
+  Q.correctIdx=correctIdx; Q.choicesShown=choices; Q.curOrigIdx=idxs[pos];
+  const isFav=(deck.fav||[]).includes(idxs[pos]);
+  const stack = choices.length>4 || choices.some(c=>c.length>46);
+  const choiceHTML = choices.map((c,i)=>`
+    <button class="choice" data-c="${i}">
+      <span class="idx">${i+1}</span><span>${esc(c)}</span>
+    </button>`).join("");
+  $("#pmain").innerHTML=`
+    <div class="p-stage">
+      <div class="card fade">
+        <button class="star ${isFav?'on':''}" id="starBtn" title="즐겨찾기" aria-label="즐겨찾기">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="${isFav?'currentColor':'none'}" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="m12 3 2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.9 6.8 19.6l1-5.8L3.6 9.7l5.8-.8z"/></svg>
+        </button>
+        <span class="qtag">${isV?'VOCAB':'Q'+(pos+1)}</span>
+        ${promptHTML}
+      </div>
+    </div>
+    <div class="p-choices ${stack?'stack':''}" id="choices">${choiceHTML}</div>
+    <div class="p-bottom"><button class="dunno" id="dunno">모르겠어요 <span class="mono">(9)</span></button></div>`;
+  $("#choices").addEventListener("click",e=>{const b=e.target.closest("[data-c]");if(b)answer(+b.dataset.c);});
+  $("#dunno").onclick=()=>answer(-1);
+  $("#starBtn").onclick=toggleFav;
+}
+function toggleFav(){
+  const {deck,curOrigIdx}=Q; deck.fav=deck.fav||[];
+  const i=deck.fav.indexOf(curOrigIdx);
+  if(i>=0)deck.fav.splice(i,1); else deck.fav.push(curOrigIdx);
+  save();
+  $("#starBtn").classList.toggle("on", deck.fav.includes(curOrigIdx));
+  const on=deck.fav.includes(curOrigIdx);
+  $("#starBtn").querySelector("svg").setAttribute("fill",on?"currentColor":"none");
+}
+function answer(sel){
+  if(Q.answered)return; Q.answered=true;
+  const {deck,correctIdx,curOrigIdx}=Q;
+  const btns=[...document.querySelectorAll("#choices .choice")];
+  btns.forEach((b,i)=>{ b.disabled=true;
+    if(i===correctIdx)b.classList.add("correct");
+    else if(i===sel)b.classList.add("wrong");
+    else b.classList.add("dim");
+  });
+  const ok = sel===correctIdx;
+  deck.wrong=deck.wrong||[];
+  if(ok){ Q.correct++; const wi=deck.wrong.indexOf(curOrigIdx); if(wi>=0)deck.wrong.splice(wi,1); }
+  else {
+    Q.wrong.push({q:Q.isV?promptTextForReview():deck.items[curOrigIdx].q,
+                  correct:Q.choicesShown[correctIdx],
+                  chosen: sel>=0? Q.choicesShown[sel] : "(모르겠어요)"});
+    if(!deck.wrong.includes(curOrigIdx))deck.wrong.push(curOrigIdx);
+  }
+  save();
+  const delay = ok?620:900;
+  setTimeout(next,delay);
+}
+function promptTextForReview(){
+  const {deck,curOrigIdx,dir}=Q; const it=deck.items[curOrigIdx];
+  return dir==="qa"? it.q : it.a;
+}
+function next(){ Q.pos++; if(Q.pos>=Q.idxs.length) finish(); else renderQuestion(); }
+function keyHandler(e){
+  if(!Q)return;
+  if(e.key==="Escape"){ quitQuiz(); return; }
+  if(Q.answered)return;
+  if(e.key>="1"&&e.key<="5"){ const i=+e.key-1; const b=document.querySelector(`#choices [data-c="${i}"]`); if(b)answer(i); }
+  else if(e.key==="9") answer(-1);
+  else if(e.key.toLowerCase()==="f"){ toggleFav(); }
+}
+function finish(){
+  const {deck,idxs,correct,wrong}=Q;
+  const total=idxs.length; const pct=Math.round(correct/total*100);
+  if(startOpts.mode==="all"){ deck.best = deck.best==null? pct : Math.max(deck.best,pct); }
+  save();
+  $("#pgl").style.width="100%";
+  const R=2*Math.PI*66; const dash=R*pct/100;
+  const reviewHTML = wrong.length? `
+    <div class="review">
+      <h4>다시 볼 ${wrong.length}문항</h4>
+      ${wrong.map(w=>`<div class="rev-item">
+        <div class="rq">${esc(w.q)}</div>
+        <div class="ra"><span class="tag g">정답</span><span>${esc(w.correct)}</span></div>
+        <div class="ra" style="margin-top:4px"><span class="tag r">내 답</span><span style="color:var(--muted)">${esc(w.chosen)}</span></div>
+      </div>`).join("")}
+    </div>`:`<div class="review" style="text-align:center;color:var(--good);font-weight:700">🎉 전부 맞혔어요!</div>`;
+  const msg = pct===100?"완벽해요!":pct>=80?"잘하고 있어요":pct>=50?"조금만 더!":"복습이 필요해요";
+  $("#pmain").innerHTML=`<div class="p-stage" style="align-items:flex-start;overflow:auto;padding-top:26px">
+    <div class="result fade">
+      <div class="ring">
+        <svg width="150" height="150"><circle cx="75" cy="75" r="66" fill="none" stroke="var(--line)" stroke-width="12"/>
+        <circle cx="75" cy="75" r="66" fill="none" stroke="var(--accent)" stroke-width="12" stroke-linecap="round"
+          stroke-dasharray="${dash} ${R}"/></svg>
+        <div class="pct"><b class="mono">${pct}%</b><span>정답률</span></div>
+      </div>
+      <h2>${msg}</h2>
+      <div class="tally"><b class="mono">${correct}</b> 맞음 · <b class="mono">${total-correct}</b> 틀림 · 총 <b class="mono">${total}</b>문항</div>
+      <div class="result-actions">
+        ${wrong.length?`<button class="btn primary" id="retryWrong">오답 ${wrong.length}개 다시</button>`:``}
+        <button class="btn" id="retryAll">전체 다시</button>
+        <button class="btn ghost" id="toCat">세트 목록으로</button>
+      </div>
+      ${reviewHTML}
+    </div></div>`;
+  $("#retryAll").onclick=()=>{ startOpts.mode="all"; launchQuiz(deck); };
+  const rw=$("#retryWrong"); if(rw)rw.onclick=()=>{ startOpts.mode="wrong"; launchQuiz(deck); };
+  $("#toCat").onclick=quitQuiz;
+  document.removeEventListener("keydown",keyHandler);
+}
+
+/* ================= MODAL / TOAST helpers ================= */
+function closeX(){ return `<button class="icon-btn" data-close aria-label="닫기"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>`; }
+function openModal(html){
+  const host=$("#modalHost");
+  host.innerHTML=`<div class="scrim" id="scrim"><div class="modal fade" role="dialog" aria-modal="true">${html}</div></div>`;
+  host.addEventListener("click",e=>{ if(e.target.id==="scrim"||e.target.closest("[data-close]"))closeModal(); },{once:false});
+  document.addEventListener("keydown",escClose);
+  const f=host.querySelector("input,textarea,button"); if(f&&f.tagName!=="BUTTON")f.focus();
+}
+function escClose(e){ if(e.key==="Escape")closeModal(); }
+function closeModal(){ if(Q)return; $("#modalHost").innerHTML=""; document.removeEventListener("keydown",escClose); }
+function confirmModal(title,sub,onOk){
+  openModal(`<header><h3>${title}</h3></header>
+    <div class="body"><p style="color:var(--muted);margin:0">${sub}</p></div>
+    <div class="foot"><button class="btn ghost" data-close>취소</button><button class="btn danger" id="cfmOk" style="border-color:var(--bad);color:var(--bad)">삭제</button></div>`);
+  $("#cfmOk").onclick=onOk;
+}
+let toastT;
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),2200); }
+
+/* =========================================================
+   SUPABASE  ·  magic-link auth + cross-device sync
+   - no build step: supabase-js loaded via CDN ESM (dynamic import)
+   - localStorage stays as the offline read cache
+   - strategy: pull-on-login + debounced "mirror" push
+     (upsert every row, delete server rows no longer present)
+========================================================= */
+const SUPA_URL = "https://djmexkzwummuocmndepw.supabase.co";
+const SUPA_KEY = "sb_publishable_nWyyRqDANEFmkWaEdVeNbQ_UoV_INws"; // publishable/anon key — safe in the client (RLS protects data)
+
+let sb=null, session=null;
+let syncReady=false, syncT=null, syncing=false, syncDirty=false, syncState="idle";
+
+function uuid(){
+  if(crypto && crypto.randomUUID) return crypto.randomUUID();
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{
+    const r=Math.random()*16|0, v=c==="x"?r:(r&0x3|0x8); return v.toString(16);
+  });
+}
+
+/* ---- debounced sync scheduler (called from save()) ---- */
+function scheduleSync(){
+  if(!syncReady) return;
+  syncDirty=true;
+  clearTimeout(syncT);
+  syncT=setTimeout(runSync,1200);
+}
+async function runSync(){
+  if(!syncReady||syncing) return;
+  syncing=true; syncDirty=false;
+  try{ await pushAll(); }catch(e){ console.warn("[sync] push failed",e); }
+  syncing=false;
+  if(syncDirty) scheduleSync(); // changes arrived mid-flight
+}
+
+/* ---- auth UI (topbar) ---- */
+function renderAuth(){
+  const box=$("#authBox"); if(!box) return;
+  if(!sb){ box.innerHTML=`<span class="auth-off mono" title="클라우드에 연결하지 못했어요 — 이 기기에만 저장됩니다">오프라인</span>`; return; }
+  if(session && session.user){
+    const email=session.user.email||"계정";
+    box.innerHTML=`<button class="btn sm ghost" id="acctBtn" title="${esc(email)} · 눌러서 계정/동기화">
+        <span class="dot-sync ${syncState}"></span><span class="acct-email">${esc(email)}</span></button>`;
+    $("#acctBtn").onclick=acctMenu;
+  }else{
+    box.innerHTML=`<button class="btn sm primary" id="loginBtn">로그인</button>`;
+    $("#loginBtn").onclick=loginModal;
+  }
+}
+
+function loginModal(){
+  openModal(`<header><h3>로그인 / 회원가입</h3>${closeX()}</header>
+    <div class="body">
+      <p style="color:var(--muted);font-size:14px;margin:-2px 0 16px">
+        이메일로 <b>매직링크</b>를 보내드려요. 메일의 링크를 누르면 이 기기에서 로그인되고,
+        폰·패드·PC 어디서든 <b>같은 단어장·진행률</b>이 동기화됩니다.
+      </p>
+      <div class="field"><label>이메일</label>
+        <input type="text" id="loginEmail" inputmode="email" autocomplete="email" placeholder="you@example.com" autofocus></div>
+      <div class="parsebox idle" id="loginMsg">가입 절차 없이, 링크를 받으면 자동으로 계정이 만들어집니다.</div>
+    </div>
+    <div class="foot">
+      <button class="btn ghost" data-close>취소</button>
+      <button class="btn primary" id="sendLink">매직링크 보내기</button>
+    </div>`);
+  const send=async()=>{
+    const email=($("#loginEmail").value||"").trim();
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return toast("올바른 이메일을 입력하세요");
+    const btn=$("#sendLink"), msg=$("#loginMsg");
+    btn.disabled=true; btn.textContent="보내는 중…";
+    const redirect=(location.protocol==="http:"||location.protocol==="https:")
+      ? location.origin+location.pathname : location.href;
+    const { error }=await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: redirect } });
+    if(error){
+      msg.className="parsebox warn"; msg.textContent="전송 실패: "+error.message;
+      btn.disabled=false; btn.textContent="매직링크 보내기";
+    }else{
+      msg.className="parsebox ok";
+      msg.innerHTML="✓ <b>"+esc(email)+"</b> 로 링크를 보냈어요. 메일함(스팸함 포함)을 확인하세요.";
+      btn.textContent="전송됨 ✓";
+    }
+  };
+  $("#sendLink").onclick=send;
+  const inp=$("#loginEmail");
+  if(inp) inp.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); send(); }});
+}
+
+function acctMenu(){
+  const email=session&&session.user? (session.user.email||"") : "";
+  openModal(`<header><h3>계정</h3>${closeX()}</header>
+    <div class="body">
+      <div class="field"><label>로그인됨</label><div class="mono" style="color:var(--muted);word-break:break-all">${esc(email)}</div></div>
+      <p style="color:var(--muted);font-size:13px;margin:0">
+        이 기기의 데이터는 클라우드와 자동 동기화됩니다. 로그아웃해도 이 기기의 로컬 캐시는 유지돼요.
+      </p>
+    </div>
+    <div class="foot">
+      <button class="btn ghost" data-close>닫기</button>
+      <button class="btn" id="syncNow">지금 동기화</button>
+      <button class="btn danger" id="logoutBtn" style="border-color:var(--bad);color:var(--bad)">로그아웃</button>
+    </div>`);
+  $("#syncNow").onclick=async()=>{ closeModal(); try{ await pushAll(); toast("동기화됨 ✓"); }catch(e){ toast("동기화 실패"); } };
+  $("#logoutBtn").onclick=async()=>{ closeModal(); try{ await sb.auth.signOut(); }catch(e){} };
+}
+
+/* ---- pull: rebuild in-memory DB from server rows ---- */
+async function pullAll(){
+  const q=t=>sb.from(t).select("*").order("sort",{ascending:true});
+  const [cr,dr,ir]=await Promise.all([q("categories"),q("decks"),q("items")]);
+  if(cr.error) throw cr.error; if(dr.error) throw dr.error; if(ir.error) throw ir.error;
+  const cats=cr.data||[], decks=dr.data||[], items=ir.data||[];
+  const out={cats:[]}, catById={}, deckById={};
+  cats.forEach(c=>{ const cat={id:c.id,sid:c.id,name:c.name,emoji:c.emoji||"📚",decks:[]}; catById[c.id]=cat; out.cats.push(cat); });
+  decks.forEach(d=>{
+    const cat=catById[d.category_id]; if(!cat) return;
+    const deck={id:d.id,sid:d.id,name:d.name,type:d.type,created:Date.parse(d.created_at)||Date.now(),
+                items:[],fav:[],wrong:[],best:(d.best==null?null:d.best)};
+    deckById[d.id]=deck; cat.decks.push(deck);
+  });
+  items.forEach(it=>{
+    const deck=deckById[it.deck_id]; if(!deck) return;
+    const idx=deck.items.length;
+    const item={sid:it.id, q:it.q};
+    if(it.a!=null) item.a=it.a;
+    if(it.choices!=null) item.choices=it.choices;
+    if(it.answer!=null) item.answer=it.answer;
+    deck.items.push(item);
+    if(it.fav) deck.fav.push(idx);
+    if(it.wrong) deck.wrong.push(idx);
+  });
+  return out;
+}
+
+/* ---- push: mirror the whole DB up (upsert all + delete orphans) ---- */
+async function pushAll(){
+  if(!sb||!session||!session.user) return;
+  syncState="busy"; renderAuth();
+  const uidv=session.user.id;
+  const cats=[], decks=[], items=[];
+  DB.cats.forEach((c,ci)=>{
+    if(!c.sid) c.sid=uuid();
+    cats.push({id:c.sid,user_id:uidv,name:c.name,emoji:c.emoji||"📚",sort:ci});
+    (c.decks||[]).forEach((d,di)=>{
+      if(!d.sid) d.sid=uuid();
+      decks.push({id:d.sid,user_id:uidv,category_id:c.sid,name:d.name,type:d.type,
+                  best:(d.best==null?null:d.best),sort:di});
+      const fav=new Set(d.fav||[]), wrong=new Set(d.wrong||[]);
+      (d.items||[]).forEach((it,ii)=>{
+        if(!it.sid) it.sid=uuid();
+        items.push({id:it.sid,user_id:uidv,deck_id:d.sid,sort:ii,
+          q:it.q, a:(it.a!=null?it.a:null),
+          choices:(it.choices!=null?it.choices:null),
+          answer:(it.answer!=null?it.answer:null),
+          fav:fav.has(ii), wrong:wrong.has(ii)});
+      });
+    });
+  });
+  let err=null;
+  const up=async(t,rows)=>{ if(!rows.length) return; const {error}=await sb.from(t).upsert(rows); if(error) throw error; };
+  try{
+    // parents first (FK), then children
+    await up("categories",cats);
+    await up("decks",decks);
+    await up("items",items);
+    // remove rows deleted locally — children first
+    await delOrphans("items",items.map(x=>x.id));
+    await delOrphans("decks",decks.map(x=>x.id));
+    await delOrphans("categories",cats.map(x=>x.id));
+    persistLocal(); // persist newly-assigned sids so reloads keep the mapping
+    syncState="ok";
+  }catch(e){ err=e; syncState="err"; }
+  renderAuth();
+  if(err) throw err;
+}
+async function delOrphans(t,keepIds){
+  const keep=new Set(keepIds);
+  const { data, error }=await sb.from(t).select("id");
+  if(error) throw error;
+  const gone=(data||[]).map(r=>r.id).filter(id=>!keep.has(id));
+  for(let i=0;i<gone.length;i+=200){
+    const { error:e2 }=await sb.from(t).delete().in("id",gone.slice(i,i+200));
+    if(e2) throw e2;
+  }
+}
+
+/* ---- session lifecycle ---- */
+async function bootstrapSync(){
+  try{
+    syncState="busy"; renderAuth();
+    const remote=await pullAll();
+    if(remote.cats.length){
+      // server has data -> it wins (online-first). replace local, cache it.
+      DB=remote; persistLocal(); syncReady=true;
+      syncState="ok"; renderAuth();
+      go({view:"home",catId:null});
+      toast("동기화됨 ✓");
+    }else{
+      // server empty -> one-time migrate the local data (seed or user's) up.
+      const hadLocal=DB.cats.length>0;
+      syncReady=true;
+      await pushAll();
+      toast(hadLocal? "기존 데이터를 계정에 업로드했어요 ✓" : "동기화 준비 완료 ✓");
+      render();
+    }
+  }catch(e){
+    console.warn("[sync] bootstrap failed",e);
+    syncState="err"; renderAuth();
+    toast("동기화 실패 — 오프라인 모드로 계속합니다");
+  }
+}
+
+async function onSession(s){
+  const was=session&&session.user? session.user.id : null;
+  session=s;
+  const now=s&&s.user? s.user.id : null;
+  renderAuth();
+  if(now && now!==was){
+    // clean the magic-link tokens out of the URL
+    if(location.hash.includes("access_token")) history.replaceState(null,"",location.pathname+location.search);
+    await bootstrapSync();
+  }else if(!now && was){
+    syncReady=false; syncState="idle"; renderAuth();
+    toast("로그아웃되었습니다");
+  }
+}
+
+async function initSupabase(){
+  try{
+    const { createClient }=await import("https://esm.sh/@supabase/supabase-js@2");
+    sb=createClient(SUPA_URL,SUPA_KEY,{ auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true } });
+  }catch(e){
+    console.warn("[supa] client failed to load — running local-only",e);
+    sb=null; renderAuth(); return;
+  }
+  sb.auth.onAuthStateChange((_ev,s)=>{ onSession(s); });
+  try{ const { data:{ session:s } }=await sb.auth.getSession(); await onSession(s); }
+  catch(e){ console.warn("[supa] getSession failed",e); renderAuth(); }
+}
+
+/* ================= go ================= */
+renderAuth();
+render();
+initSupabase();
+</script>
+</body>
+</html>

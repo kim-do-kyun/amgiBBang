@@ -1,0 +1,15 @@
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# editor
+.vscode/
+.idea/
+
+# logs / temp
+*.log
+.tmp/
+
+# 원본 압축 백업 (있다면 저장소에 넣지 않음)
+*.zip
