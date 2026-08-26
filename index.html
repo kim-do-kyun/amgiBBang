@@ -143,7 +143,7 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .field{margin-bottom:16px}
 .field label{display:block;font-weight:700;font-size:13px;margin-bottom:7px}
 .field .hint{color:var(--muted);font-weight:400;font-size:12px;margin-top:5px;line-height:1.55}
-input[type=text]{width:100%;padding:11px 13px;border:1px solid var(--line-2);border-radius:10px;background:var(--panel-2);color:var(--ink);font-size:14px;font-family:inherit}
+input[type=text],input[type=password],input[type=email],input[type=number]{width:100%;padding:11px 13px;border:1px solid var(--line-2);border-radius:10px;background:var(--panel-2);color:var(--ink);font-size:14px;font-family:inherit}
 textarea{width:100%;min-height:150px;padding:12px 13px;border:1px solid var(--line-2);border-radius:10px;background:var(--panel-2);color:var(--ink);font-size:13px;font-family:"JetBrains Mono",monospace;line-height:1.6;resize:vertical}
 input:focus,textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
 .seg{display:flex;gap:6px;background:var(--panel-2);border:1px solid var(--line);padding:4px;border-radius:12px}
@@ -256,6 +256,13 @@ input:focus,textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 
 .gate-form{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
 .gate-form input{width:100%;padding:13px 14px;text-align:center;font-size:15px}
 .gate-form .btn{width:100%;justify-content:center;padding:13px}
+.gate-toggle-wrap{margin-top:12px}
+.gate-toggle{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:10px;font-size:13px;font-weight:700;color:var(--muted);background:transparent;border:1px solid transparent;transition:background .15s,border-color .15s,color .15s}
+.gate-toggle:hover{background:var(--panel-2);border-color:var(--line-2);color:var(--accent-ink)}
+.gate-toggle:active{transform:translateY(1px)}
+.pw-hero{text-align:center;margin:-2px 0 18px}
+.pw-lock{font-size:34px;line-height:1;margin-bottom:8px}
+.pw-hero p{color:var(--muted);font-size:13.5px;line-height:1.6;margin:0}
 
 /* ---------- my page (stats) ---------- */
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:4px}
@@ -428,7 +435,22 @@ let route = {view:"home", catId:null, deckId:null};
 const findCat = id => DB.cats.find(c=>c.id===id);
 const findDeck = (cat,id)=> cat && cat.decks.find(d=>d.id===id);
 
-function go(r){ route = Object.assign({}, route, r); render(); }
+function routeState(){ return {view:route.view,catId:route.catId,deckId:route.deckId}; }
+function go(r){
+  route = Object.assign({}, route, r);
+  try{ history.pushState(routeState(), ""); }catch(e){}
+  render();
+}
+// browser Back / gesture: dismiss overlays first, else navigate views
+window.addEventListener("popstate", e=>{
+  const qa=document.getElementById("quitAsk");
+  if(qa){ qa.remove(); try{history.pushState(routeState(),"");}catch(_){} return; }   // cancel quit-confirm
+  if(Q){ quitQuiz(); try{history.pushState(routeState(),"");}catch(_){} return; }       // back = leave quiz (asks if mid-way)
+  if($("#modalHost .scrim")){ closeModal(); try{history.pushState(routeState(),"");}catch(_){} return; } // back = close modal
+  const st=e.state||{view:"home",catId:null,deckId:null};
+  route={view:st.view||"home",catId:st.catId||null,deckId:st.deckId||null};
+  render();
+});
 
 /* ================= RENDER ================= */
 function render(){
@@ -460,7 +482,7 @@ function gateHTML(){
       <button class="btn primary" id="gateSend">${pwMode?"비밀번호로 로그인":"매직링크로 로그인"}</button>
     </div>
     <div class="parsebox idle" id="gateMsg">${pwMode?"비밀번호를 설정한 계정만 사용할 수 있어요. 처음이면 매직링크로 로그인 후, 계정 메뉴에서 비밀번호를 설정하세요.":"가입 절차 없이, 메일 링크를 누르면 자동으로 계정이 생성됩니다."}</div>
-    <div style="margin-top:14px"><a class="link" id="gateToggle">${pwMode?"매직링크로 로그인":"비밀번호로 로그인"}</a></div>
+    <div class="gate-toggle-wrap"><button type="button" class="gate-toggle" id="gateToggle">${pwMode?"← 매직링크로 로그인":"비밀번호로 로그인 →"}</button></div>
   </div></div>`;
 }
 function wireGate(){
@@ -1444,7 +1466,7 @@ function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("sh
 const SUPA_URL = "https://djmexkzwummuocmndepw.supabase.co";
 const SUPA_KEY = "sb_publishable_nWyyRqDANEFmkWaEdVeNbQ_UoV_INws"; // publishable/anon key — safe in the client (RLS protects data)
 
-let sb=null, session=null, authReady=false;
+let sb=null, session=null, authReady=false, justSignedInViaMagic=false;
 let syncReady=false, syncT=null, syncing=false, syncDirty=false, syncState="idle";
 
 function uuid(){
@@ -1542,16 +1564,22 @@ function acctMenu(){
   $("#syncNow").onclick=async()=>{ closeModal(); try{ await pushAll(); toast("동기화됨 ✓"); }catch(e){ toast("동기화 실패"); } };
   $("#logoutBtn").onclick=async()=>{ closeModal(); try{ await sb.auth.signOut(); }catch(e){} };
 }
-function setPasswordModal(){
-  openModal(`<header><h3>비밀번호 설정</h3>${closeX()}</header>
+function setPasswordModal(welcome){
+  const email=session&&session.user? (session.user.email||"") : "";
+  openModal(`<header><h3>${welcome?"환영해요! 🍞":"비밀번호 설정"}</h3>${closeX()}</header>
     <div class="body">
-      <p style="color:var(--muted);font-size:13px;margin:-2px 0 14px">비밀번호를 정해두면 다른 기기에서도 <b>매직링크 없이</b> 이메일 + 비밀번호로 바로 로그인할 수 있어요.</p>
-      <div class="field"><label>새 비밀번호 <span style="font-weight:400;color:var(--muted)">(6자 이상)</span></label>
-        <input type="password" id="npw" autocomplete="new-password" placeholder="••••••"></div>
+      <div class="pw-hero">
+        <div class="pw-lock">🔒</div>
+        <p>${welcome
+            ? `<b>${esc(email)}</b> 로 로그인됐어요.<br>비밀번호를 정해두면 다음부턴 <b>매직링크 없이</b> 바로 로그인할 수 있어요.`
+            : `비밀번호를 정해두면 다른 기기에서도 <b>매직링크 없이</b> 이메일 + 비밀번호로 바로 로그인할 수 있어요.`}</p>
+      </div>
+      <div class="field" style="margin-bottom:8px"><label>새 비밀번호 <span style="font-weight:400;color:var(--muted)">(6자 이상)</span></label>
+        <input type="password" id="npw" autocomplete="new-password" placeholder="••••••" autofocus></div>
       <div class="parsebox idle" id="pwMsg">이 비밀번호는 이 계정에만 저장돼요.</div>
     </div>
-    <div class="foot"><button class="btn ghost" data-close>취소</button><button class="btn primary" id="pwSave">저장</button></div>`);
-  $("#pwSave").onclick=async()=>{
+    <div class="foot"><button class="btn ghost" data-close>${welcome?"나중에":"취소"}</button><button class="btn primary" id="pwSave">저장</button></div>`);
+  const save=async()=>{
     const pw=$("#npw").value||""; const msg=$("#pwMsg");
     if(pw.length<6){ msg.className="parsebox warn"; msg.textContent="6자 이상 입력하세요"; return; }
     const btn=$("#pwSave"); btn.disabled=true; btn.textContent="저장 중…";
@@ -1559,8 +1587,11 @@ function setPasswordModal(){
       const { error }=await sb.auth.updateUser({ password:pw });
       if(error) throw error;
       msg.className="parsebox ok"; msg.textContent="✓ 설정 완료 — 이제 이메일 + 비밀번호로 로그인할 수 있어요."; btn.textContent="완료"; toast("비밀번호 설정됨 ✓");
+      setTimeout(()=>{ if(!Q) closeModal(); }, 1100);
     }catch(e){ msg.className="parsebox warn"; msg.textContent="실패: "+(e&&e.message||e); btn.disabled=false; btn.textContent="저장"; }
   };
+  $("#pwSave").onclick=save;
+  const inp=$("#npw"); if(inp) inp.addEventListener("keydown",e=>{ if(e.key==="Enter"){e.preventDefault();save();} });
 }
 
 /* ---- pull: rebuild in-memory DB from server rows ---- */
@@ -1669,16 +1700,26 @@ async function bootstrapSync(){
   }
 }
 
-async function onSession(s){
+function maybePromptPassword(){
+  if(!sb||!session||!session.user) return;
+  if(!justSignedInViaMagic) return;            // only right after a magic-link login
+  const key="amgi.pwPrompted."+session.user.id;
+  try{ if(localStorage.getItem(key)) return; localStorage.setItem(key,"1"); }catch(e){}
+  setTimeout(()=>{ if(!Q && !$("#modalHost .scrim")) setPasswordModal(true); }, 700);
+}
+async function onSession(s, ev){
   authReady=true; // auth has resolved at least once
   const was=session&&session.user? session.user.id : null;
   session=s;
   const now=s&&s.user? s.user.id : null;
   renderAuth();
   if(now && now!==was){
-    // clean the magic-link tokens out of the URL
-    if(location.hash.includes("access_token")) history.replaceState(null,"",location.pathname+location.search);
+    // detect magic-link return (token in URL hash) BEFORE we scrub it
+    const viaMagic=location.hash.includes("access_token");
+    justSignedInViaMagic = viaMagic && ev!=="TOKEN_REFRESHED";
+    if(viaMagic) history.replaceState(null,"",location.pathname+location.search);
     await bootstrapSync();
+    maybePromptPassword();
   }else if(!now && was){
     // signed out → drop local cache (don't leak to next account) and show the gate
     syncReady=false; syncState="idle"; DB={cats:[]}; persistLocal();
@@ -1701,8 +1742,8 @@ async function initSupabase(){
     console.warn("[supa] client failed to load — running local-only",e);
     sb=null; authReady=true; renderAuth(); render(); return;
   }
-  sb.auth.onAuthStateChange((_ev,s)=>{ onSession(s); });
-  try{ const { data:{ session:s } }=await sb.auth.getSession(); await onSession(s); }
+  sb.auth.onAuthStateChange((ev,s)=>{ onSession(s,ev); });
+  try{ const { data:{ session:s } }=await sb.auth.getSession(); await onSession(s,"INITIAL_SESSION"); }
   catch(e){ console.warn("[supa] getSession failed",e); authReady=true; renderAuth(); render(); }
 }
 
