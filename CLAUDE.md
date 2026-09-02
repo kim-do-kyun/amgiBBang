@@ -57,7 +57,7 @@ Item(quiz)  = { q:문제, choices:[String], answer:정답인덱스 }
 
 1. **⭐ 크로스 기기 동기화 (이번 목표)** — Supabase 연동. `db/schema.sql` + `docs/SUPABASE.md` 따라 로그인·pull/push·마이그레이션 구현. 먼저 정적 배포로 동작 확인 후 얹어도 됨.
 2. **정적 배포** — 1과 병행/선행 가능. Vercel/Netlify/Pages(프리셋 None).
-3. **PWA화** — manifest + service worker로 오프라인·홈 화면 설치. 동기화와 궁합 좋음.
+3. **PWA화** — ✅ 완료. `manifest.webmanifest`(standalone) + `sw.js`(앱셸 network-first, CDN stale-while-revalidate) + 아이콘(icon-192/512, maskable, apple-touch-icon 🍞) + apple meta. iOS는 공유→홈 화면에 추가(SW 없이도 설치됨), Android/데스크톱 크롬은 설치 프롬프트. 서비스워커는 https(또는 localhost)에서만 등록.
 4. **PDF 자동 추출** — ✅ 완료. `readPdf`가 pdf.js를 CDN ESM으로 **동적 로드**(esm.sh, 워커 포함)해 텍스트 추출 → `textToQuiz`. 정답 없는 PDF는 `answerEditorModal`(정답 편집기)로 지정. `.hwp`(한글 5.0 바이너리)는 미지원 → 한글에서 PDF로 저장 안내.
 5. **원본 파일 보관(선택)** — 업로드한 엑셀/PDF를 Supabase Storage에 저장(재생성용).
 

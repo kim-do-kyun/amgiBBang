@@ -7,6 +7,13 @@
 <meta name="theme-color" content="#5a5be0">
 <title>amgiBBang · 암기빵</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🍞%3C/text%3E%3C/svg%3E">
+<!-- PWA: 홈 화면 설치 + 오프라인 -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="암기빵">
+<meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap">
@@ -220,7 +227,6 @@ input:focus,textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media (max-width:600px){
   .p-choices{grid-template-columns:1fr}
-  .card{padding:34px 20px}
   .section-head{margin-top:26px}
   /* compact top bar so brand + breadcrumb + account fit 375px */
   .topbar .row{gap:8px}
@@ -229,6 +235,17 @@ input:focus,textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 
   .crumb .cur{flex:0 1 auto;min-width:0;max-width:none}      /* breadcrumb name ellipsizes to fit */
   .brand{font-size:15px;flex:none}
   .brand small{display:none}
+  /* deck rows: keep the info column from being crushed by badge+bar+actions */
+  .deck{gap:10px;padding:14px}
+  .deck .kind{width:38px;height:38px;font-size:11px}
+  .deck .mini-bar{display:none}            /* % is already shown in the 최고 pill */
+  .deck-actions{gap:2px}
+  .deck-actions .icon-btn{width:30px;height:30px}
+  /* quiz player: fit the card + all 4 choices without needing to scroll */
+  .card{min-height:auto;padding:26px 18px}
+  .p-stage{padding:10px 16px 6px}
+  .prompt-word{font-size:clamp(28px,8vw,44px)}
+  .p-bottom{padding:4px 20px calc(16px + env(safe-area-inset-bottom))}
 }
 .hide{display:none!important}
 
@@ -355,6 +372,13 @@ input:focus,textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 
 
 <div id="modalHost"></div>
 <div class="toast" id="toast"></div>
+
+<script>
+/* register service worker for PWA offline (no-op if unsupported / file://) */
+if("serviceWorker" in navigator && location.protocol.startsWith("http")){
+  window.addEventListener("load",()=>{ navigator.serviceWorker.register("sw.js").catch(e=>console.warn("[sw]",e)); });
+}
+</script>
 
 <script>
 "use strict";
