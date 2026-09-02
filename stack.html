@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#5a5be0">
+<meta name="description" content="amgiBBang 기술 스택·아키텍처 정리">
+<title>amgiBBang 기술 스택</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+:root{
+  --bg:#f6f6fb; --panel:#ffffff; --panel-2:#f0f0f8;
+  --ink:#1b1c26; --muted:#5c5e70; --faint:#9092a6;
+  --line:#e7e7f1; --line-2:#d8d9e8;
+  --accent:#5a5be0; --accent-ink:#4344c9; --accent-soft:#ececfb;
+  --good:#1f9d62; --good-soft:#e4f5ec; --good-ink:#177a4b;
+  --shadow:0 1px 2px rgba(24,25,45,.05),0 10px 30px rgba(24,25,45,.07);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#121218; --panel:#1c1d25; --panel-2:#24252f;
+    --ink:#ecedf4; --muted:#a4a6b8; --faint:#71738a;
+    --line:#2a2b38; --line-2:#363749;
+    --accent:#8a8bf2; --accent-ink:#b9b9fb; --accent-soft:#26263a;
+    --good:#3fbd7e; --good-soft:#17301f; --good-ink:#6bd49b;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 34px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121218; --panel:#1c1d25; --panel-2:#24252f;
+  --ink:#ecedf4; --muted:#a4a6b8; --faint:#71738a;
+  --line:#2a2b38; --line-2:#363749;
+  --accent:#8a8bf2; --accent-ink:#b9b9fb; --accent-soft:#26263a;
+  --good:#3fbd7e; --good-soft:#17301f; --good-ink:#6bd49b;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 34px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"Noto Sans KR",system-ui,-apple-system,"Malgun Gothic",sans-serif;
+  line-height:1.65; -webkit-font-smoothing:antialiased;
+}
+.mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace}
+.wrap{max-width:940px;margin:0 auto;padding:0 22px}
+h1,h2,h3{margin:0;text-wrap:balance;letter-spacing:-.02em;line-height:1.2}
+a{color:var(--accent-ink);text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--accent-ink) 30%,transparent)}
+a:hover{border-bottom-color:var(--accent-ink)}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:3px}
+
+/* ---------- header ---------- */
+.head{padding:56px 0 30px}
+.logo{width:60px;height:60px;border-radius:16px;display:grid;place-items:center;font-size:34px;
+  background:linear-gradient(150deg,var(--accent),var(--accent-ink));box-shadow:var(--shadow)}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent-ink);font-weight:700;margin:22px 0 8px}
+.head h1{font-size:clamp(30px,6vw,46px);font-weight:900}
+.head .lede{margin:16px 0 0;max-width:60ch;color:var(--muted);font-size:clamp(15px,2.4vw,17px)}
+.head .lede b{color:var(--ink);font-weight:700}
+.tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.tag{font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:700;padding:6px 11px;border-radius:8px;
+  background:var(--panel);border:1px solid var(--line-2);color:var(--muted)}
+.tag b{color:var(--accent-ink)}
+.links{display:flex;flex-wrap:wrap;gap:18px;margin-top:18px;font-size:13.5px;font-family:"JetBrains Mono",monospace}
+
+/* ---------- section ---------- */
+.section{padding:30px 0;border-top:1px solid var(--line)}
+.section > .kick{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-weight:700}
+.section > h2{font-size:22px;margin:6px 0 4px}
+.section > .sub{color:var(--muted);font-size:14.5px;margin:0 0 22px;max-width:64ch}
+
+/* ---------- flow diagram ---------- */
+.flow{display:grid;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow)}
+.flow-row{display:flex;align-items:stretch;gap:12px;flex-wrap:wrap}
+.node{flex:1 1 200px;min-width:0;border:1px solid var(--line-2);border-radius:12px;padding:14px 16px;background:var(--panel-2)}
+.node.hi{border-color:var(--accent);background:var(--accent-soft)}
+.node .nt{font-weight:800;font-size:14px;display:flex;align-items:center;gap:8px}
+.node .nd{color:var(--muted);font-size:12.5px;margin-top:5px;line-height:1.5}
+.node .mono{font-size:11.5px;color:var(--faint)}
+.flow-note{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12.5px}
+.flow-note::before{content:"↓";font-family:"JetBrains Mono",monospace;color:var(--accent);font-weight:700}
+.pipe{font-family:"JetBrains Mono",monospace;color:var(--faint);font-size:12px;text-align:center;padding:2px 0}
+
+/* ---------- stack cards ---------- */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px}
+.card .top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.card h3{font-size:16.5px}
+.card h3 .role{display:block;font-size:12px;font-weight:600;color:var(--accent-ink);font-family:"JetBrains Mono",monospace;letter-spacing:.02em;margin-top:3px}
+.chip{font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:999px;white-space:nowrap;
+  background:var(--panel-2);border:1px solid var(--line-2);color:var(--muted)}
+.chip.own{background:var(--good-soft);color:var(--good-ink);border-color:transparent}
+.card p{margin:0;font-size:13.5px;color:var(--muted)}
+.card .use{font-size:13px;color:var(--ink);background:var(--panel-2);border-radius:10px;padding:10px 12px;line-height:1.55}
+.card .use b{color:var(--accent-ink);font-weight:700}
+.card .use .mono{font-size:11.5px}
+
+/* ---------- decisions ---------- */
+.dec{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.dec .card{gap:8px}
+.dec h3{font-size:15px}
+.dec .q{color:var(--faint);font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:700}
+
+/* ---------- resume ---------- */
+.resume{background:linear-gradient(160deg,var(--accent-soft),var(--panel));border:1px solid var(--line-2);border-radius:18px;padding:24px 22px;box-shadow:var(--shadow)}
+.resume ul{margin:0;padding-left:0;list-style:none;display:grid;gap:12px}
+.resume li{display:flex;gap:11px;font-size:14.5px;line-height:1.6}
+.resume li::before{content:"▹";color:var(--accent);font-weight:700;flex:none}
+.resume li b{color:var(--ink)}
+.resume .mono{font-size:12.5px;color:var(--accent-ink)}
+
+footer{padding:34px 0 60px;color:var(--faint);font-size:12.5px;font-family:"JetBrains Mono",monospace;border-top:1px solid var(--line);margin-top:30px}
+
+@media (prefers-reduced-motion:no-preference){
+  .card{transition:transform .12s ease,border-color .15s ease}
+  .card:hover{transform:translateY(-2px);border-color:var(--accent)}
+}
+@media (max-width:560px){ .head{padding:38px 0 24px} }
+html,body{margin:0;padding:0}img{max-width:100%}@media print{.card,.section,.resume,.flow,.dec .card{break-inside:avoid}a{border-bottom:none}body{background:#fff}}</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="head">
+    <div class="logo">🍞</div>
+    <div class="eyebrow">amgiBBang · 무엇으로 어떻게 만들었나</div>
+    <h1>프레임워크 없이, 웹 표준으로.</h1>
+    <p class="lede">
+      <b>단일 <span class="mono">index.html</span> 한 파일</b>에 담은 학습앱. 빌드 도구도, 프론트 프레임워크도,
+      내가 돌리는 서버도 없다. 무거운 기능은 <b>필요할 때만 CDN에서 불러오고(동적 import)</b>,
+      데이터는 <b>Supabase</b>가, 배포는 <b>Vercel</b>이 맡는다.
+    </p>
+    <div class="tags">
+      <span class="tag"><b>Vanilla</b> HTML·CSS·JS</span>
+      <span class="tag">No build</span>
+      <span class="tag"><b>Supabase</b> Postgres·Auth</span>
+      <span class="tag"><b>Vercel</b> 정적배포</span>
+      <span class="tag">PWA</span>
+      <span class="tag">GitHub · Git</span>
+    </div>
+    <div class="links">
+      <a href="https://amgi-bbang.vercel.app" target="_blank" rel="noopener">▶ amgi-bbang.vercel.app</a>
+      <a href="https://github.com/kim-do-kyun/amgiBBang" target="_blank" rel="noopener">↗ github.com/kim-do-kyun/amgiBBang</a>
+    </div>
+  </header>
+
+  <!-- ARCHITECTURE FLOW -->
+  <section class="section">
+    <div class="kick">Architecture</div>
+    <h2>한눈에 보는 구조</h2>
+    <p class="sub">브라우저가 거의 모든 일을 하고(클라이언트 중심), 서버 역할은 Supabase가 관리형으로 대신한다. 내가 관리하는 백엔드 코드는 0줄.</p>
+    <div class="flow">
+      <div class="flow-row">
+        <div class="node hi">
+          <div class="nt">🍞 브라우저 — 단일 index.html</div>
+          <div class="nd">화면·라우팅·퀴즈 로직·파일 파싱까지 전부 여기서. <span class="mono">localStorage</span>는 오프라인 읽기 캐시.</div>
+        </div>
+      </div>
+      <div class="pipe">│ &nbsp; 필요할 때만 동적 import (CDN ESM) &nbsp; │ &nbsp; 데이터 read/write</div>
+      <div class="flow-row">
+        <div class="node">
+          <div class="nt">📦 CDN 라이브러리</div>
+          <div class="nd">supabase-js · pdf.js · tesseract.js<br><span class="mono">esm.sh</span> 에서 처음 쓸 때 로드</div>
+        </div>
+        <div class="node">
+          <div class="nt">🗄️ Supabase</div>
+          <div class="nd">Postgres(데이터) + Auth(로그인). <b>RLS</b>로 "내 행만" 접근 → 키가 노출돼도 안전.</div>
+        </div>
+        <div class="node">
+          <div class="nt">▲ Vercel + GitHub</div>
+          <div class="nd"><span class="mono">git push</span> → 자동 재배포. 정적 호스팅.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STACK BY LAYER -->
+  <section class="section">
+    <div class="kick">The Stack</div>
+    <h2>레이어별로 뜯어보기</h2>
+    <p class="sub"><span class="chip own">직접 구현</span> 표시는 라이브러리 없이 손으로 짠 부분 — 포폴에서 강조하기 좋은 대목이다.</p>
+    <div class="grid">
+
+      <div class="card">
+        <div class="top"><h3>Vanilla JS<span class="role">프론트엔드</span></h3><span class="chip">무의존</span></div>
+        <p>React·Vue 같은 프레임워크, Webpack 같은 번들러 없이 순수 웹 표준으로.</p>
+        <div class="use"><b>어떻게</b> — 상태 객체 <span class="mono">DB</span> + <span class="mono">route</span> 를 두고 <span class="mono">render()</span>로 화면을 다시 그리는 자체 라우팅. 테마는 CSS 변수로 라이트/다크 전환.</div>
+      </div>
+
+      <div class="card">
+        <div class="top"><h3>Supabase<span class="role">DB · 인증 (BaaS)</span></h3><span class="chip">managed</span></div>
+        <p>서버를 직접 만들지 않고, 관리형 Postgres + 인증을 브라우저에서 바로 호출.</p>
+        <div class="use"><b>어떻게</b> — 테이블 <span class="mono">categories·decks·items</span>. <b>Row Level Security</b>로 로그인한 사용자 본인 데이터만 접근. 그래서 공개 키를 프론트에 둬도 안전.</div>
+      </div>
+
+      <div class="card">
+        <div class="top"><h3>동기화 계층<span class="role">pull / push</span></h3><span class="chip own">직접 구현</span></div>
+        <p>로그인하면 폰·패드·PC가 같은 데이터를 보게 만드는 핵심.</p>
+        <div class="use"><b>어떻게</b> — 로그인 시 서버에서 <b>pull</b> → 변경마다 디바운스 <b>mirror push</b>(전체 upsert + 사라진 행 삭제). <span class="mono">localStorage</span>는 오프라인 캐시로 유지.</div>
+      </div>
+
+      <div class="card">
+        <div class="top"><h3>Auth<span class="role">매직링크 · 비밀번호</span></h3><span class="chip">Supabase Auth</span></div>
+        <p>비밀번호 없이 이메일 링크로 로그인, 원하면 비밀번호도.</p>
+        <div class="use"><b>어떻게</b> — 이메일 <b>매직링크</b>(implicit flow — 모바일 호환) 기본, 계정에 <b>비밀번호</b> 설정 시 어느 기기서든 즉시 로그인. 미로그인은 게이트로 앱 진입 차단.</div>
+      </div>
+
+      <div class="card">
+        <div class="top"><h3>XLSX 리더<span class="role">엑셀 파싱</span></h3><span class="chip own">직접 구현</span></div>
+        <p>SheetJS 같은 외부 엑셀 라이브러리 <b>없이</b> 브라우저 API만으로.</p>
+        <div class="use"><b>어떻게</b> — <span class="mono">.xlsx</span>는 사실 ZIP. 중앙 디렉터리를 직접 읽고 <span class="mono">DecompressionStream</span>으로 압축 해제 → 내부 XML 파싱. 셀·한글·콤마까지 처리.</div>
+      </div>
+
+      <div class="card">
+        <div class="top"><h3>pdf.js<span class="role">PDF 텍스트 추출</span></h3><span class="chip mono">v4.10.38</span></div>
+        <p>PDF 문제집에서 글자를 뽑아 4지선다 문제로.</p>
+        <div class="use"><b>어떻게</b> — 필요할 때만 <span class="mono">esm.sh</span>에서 동적 로드(워커 포함) → 텍스트 추출 → 번호형 문제 파서에 연결. 정답 없는 PDF는 정답 편집기로 지정.</div>
+      </div>
+
+      <div class="card">
+        <div class="top"><h3>tesseract.js<span class="role">이미지 OCR</span></h3><span class="chip mono">v5</span></div>
+        <p>단어 스크린샷(캡쳐)을 글자로 인식.</p>
+        <div class="use"><b>어떻게</b> — 이미지 업로드 시 동적 로드해 <b>한글+영어</b> 인식 → 파싱. 진행률 표시. 처음 한 번만 언어데이터 다운로드.</div>
+      </div>
+
+      <div class="card">
+        <div class="top"><h3>텍스트·CSV 파서<span class="role">붙여넣기 입력</span></h3><span class="chip own">직접 구현</span></div>
+        <p>엑셀 복사·CSV·번호형 문제 텍스트를 알아서 인식.</p>
+        <div class="use"><b>어떻게</b> — 따옴표 CSV, 뜻 속 콤마 보존, <span class="mono">1./A./*정답</span> 번호형 문제, 단어장↔문제 형식 자동 감지까지 규칙 기반으로.</div>
+      </div>
+
+      <div class="card">
+        <div class="top"><h3>PWA<span class="role">홈 화면 앱 · 오프라인</span></h3><span class="chip">manifest + SW</span></div>
+        <p>브라우저 사이트를 폰에 앱처럼 설치.</p>
+        <div class="use"><b>어떻게</b> — <span class="mono">manifest.webmanifest</span>(standalone) + <b>서비스워커</b>(앱 껍데기 오프라인 캐시) + 🍞 아이콘. iOS는 공유→홈 화면에 추가.</div>
+      </div>
+
+      <div class="card">
+        <div class="top"><h3>Vercel + GitHub<span class="role">배포 · 버전관리</span></h3><span class="chip">CI/CD</span></div>
+        <p>코드를 올리면 자동으로 웹사이트가 갱신.</p>
+        <div class="use"><b>어떻게</b> — GitHub 저장소에 <span class="mono">git push</span> → Vercel이 감지해 자동 재배포. 프레임워크 프리셋 없이 정적 파일 그대로.</div>
+      </div>
+
+      <div class="card">
+        <div class="top"><h3>Google Fonts<span class="role">타이포그래피</span></h3><span class="chip">CDN</span></div>
+        <p>한글·코드용 글꼴.</p>
+        <div class="use"><b>어떻게</b> — 본문 <b>Noto Sans KR</b>, 숫자·라벨은 <b>JetBrains Mono</b>. 링크 한 줄로 로드.</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- KEY DECISIONS -->
+  <section class="section">
+    <div class="kick">Why</div>
+    <h2>핵심 설계 결정 3가지</h2>
+    <p class="sub">"왜 그렇게 만들었어요?" 라고 물으면 이렇게 답하면 된다.</p>
+    <div class="dec">
+      <div class="card">
+        <div class="q">Q. 왜 프레임워크·빌드가 없어?</div>
+        <h3>단일 파일 · 무빌드</h3>
+        <p>규모가 작아 프레임워크 오버헤드가 이득보다 크다. 파일 하나라 어디든 바로 올라가고, 열면 곧바로 실행된다. 가볍고 배포가 쉽다.</p>
+      </div>
+      <div class="card">
+        <div class="q">Q. 무거운 라이브러리는?</div>
+        <h3>CDN 동적 import</h3>
+        <p>supabase·pdf.js·tesseract는 첫 로딩을 무겁게 하지 않도록 <b>실제로 쓰는 순간에만</b> 불러온다. 초기 진입은 가볍게 유지하면서 기능은 다 챙긴다.</p>
+      </div>
+      <div class="card">
+        <div class="q">Q. 서버는 왜 없어?</div>
+        <h3>서버리스 + RLS</h3>
+        <p>인증·DB를 Supabase에 맡겨 운영할 서버가 없다. 보안은 <b>Row Level Security</b>가 DB 단에서 "내 데이터만"을 강제 → 공개 키 노출도 안전.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESUME LINE -->
+  <section class="section" style="border-top:none;padding-top:8px">
+    <div class="kick">For your portfolio</div>
+    <h2 style="margin-bottom:18px">이력서 · 면접용 한 줄</h2>
+    <div class="resume">
+      <ul>
+        <li><span>프레임워크·빌드 없이 <b>순수 웹 표준(Vanilla JS)</b>으로 만든 단일 파일 학습 웹앱 — <span class="mono">Supabase</span> 백엔드 + <span class="mono">Vercel</span> 정적 배포.</span></li>
+        <li><span>이메일 매직링크·비밀번호 <b>인증</b>과 <b>크로스 기기 동기화</b>(pull/push + 오프라인 캐시)를 직접 구현.</span></li>
+        <li><span>외부 라이브러리 없이 <b>브라우저 API(<span class="mono">DecompressionStream</span>)로 XLSX 파서</b>를 구현, PDF·이미지(OCR)까지 업로드 파이프라인 구축.</span></li>
+        <li><span><b>PWA</b>로 홈 화면 설치·오프라인 지원, RLS 기반 데이터 보안 설계.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>amgiBBang — vanilla web, done deliberately. · 단일 index.html + Supabase + Vercel</footer>
+
+</div>
+</body>
+</html>
