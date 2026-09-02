@@ -224,10 +224,11 @@ input:focus,textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 
   .section-head{margin-top:26px}
   /* compact top bar so brand + breadcrumb + account fit 375px */
   .topbar .row{gap:8px}
-  .crumb{overflow:hidden;flex:1 1 auto}
-  .brand{font-size:15px}
+  .topbar #crumb{flex:1 1 auto;min-width:0;overflow:hidden}  /* the real flex item must shrink */
+  .crumb{overflow:hidden;min-width:0}
+  .crumb .cur{flex:0 1 auto;min-width:0;max-width:none}      /* breadcrumb name ellipsizes to fit */
+  .brand{font-size:15px;flex:none}
   .brand small{display:none}
-  .crumb .cur{max-width:30vw}
 }
 .hide{display:none!important}
 
