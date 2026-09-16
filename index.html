@@ -1764,11 +1764,28 @@ function setPasswordModal(welcome){
 }
 
 /* ---- pull: rebuild in-memory DB from server rows ---- */
+// Supabase/PostgREST returns at most 1000 rows per request — page through with
+// .range() so large libraries aren't silently truncated (which would then get
+// mirror-deleted on the next push). Order by a stable key set for consistent paging.
+async function selectAll(t, orderCols){
+  const PAGE=1000; let from=0, all=[];
+  for(;;){
+    let query=sb.from(t).select("*");
+    for(const oc of orderCols) query=query.order(oc,{ascending:true});
+    const { data, error }=await query.range(from, from+PAGE-1);
+    if(error) throw error;
+    const chunk=data||[]; all=all.concat(chunk);
+    if(chunk.length<PAGE) break;
+    from+=PAGE;
+  }
+  return all;
+}
 async function pullAll(){
-  const q=t=>sb.from(t).select("*").order("sort",{ascending:true});
-  const [cr,dr,ir]=await Promise.all([q("categories"),q("decks"),q("items")]);
-  if(cr.error) throw cr.error; if(dr.error) throw dr.error; if(ir.error) throw ir.error;
-  const cats=cr.data||[], decks=dr.data||[], items=ir.data||[];
+  const [cats,decks,items]=await Promise.all([
+    selectAll("categories",["sort","id"]),
+    selectAll("decks",["sort","id"]),
+    selectAll("items",["deck_id","sort"]),  // per-deck contiguous, original order
+  ]);
   const out={cats:[]}, catById={}, deckById={};
   cats.forEach(c=>{ const cat={id:c.id,sid:c.id,name:c.name,emoji:c.emoji||"📚",decks:[]}; catById[c.id]=cat; out.cats.push(cat); });
   decks.forEach(d=>{
@@ -1834,9 +1851,15 @@ async function pushAll(){
 }
 async function delOrphans(t,keepIds){
   const keep=new Set(keepIds);
-  const { data, error }=await sb.from(t).select("id");
-  if(error) throw error;
-  const gone=(data||[]).map(r=>r.id).filter(id=>!keep.has(id));
+  // page through ALL server ids (>1000 rows would otherwise be missed)
+  const PAGE=1000; let from=0; const gone=[];
+  for(;;){
+    const { data, error }=await sb.from(t).select("id").order("id",{ascending:true}).range(from, from+PAGE-1);
+    if(error) throw error;
+    const chunk=data||[];
+    for(const r of chunk) if(!keep.has(r.id)) gone.push(r.id);
+    if(chunk.length<PAGE) break; from+=PAGE;
+  }
   for(let i=0;i<gone.length;i+=200){
     const { error:e2 }=await sb.from(t).delete().in("id",gone.slice(i,i+200));
     if(e2) throw e2;
