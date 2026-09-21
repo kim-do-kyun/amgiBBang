@@ -1388,24 +1388,26 @@ function imageTextToVocab(text){
 let PHON={};
 try{ PHON=JSON.parse(localStorage.getItem("amgi.phon")||"{}")||{}; }catch(e){ PHON={}; }
 function savePhon(){ try{ localStorage.setItem("amgi.phon",JSON.stringify(PHON)); }catch(e){} }
-const phonKey=w=>String(w||"").trim().toLowerCase();
-// fetch IPA + audio for an English word (single word most reliable). caches result (incl. "not found").
+// first English word in an entry (handles phrases + mixed "eligible for 명사" → eligible)
+const enWord=w=>{ const m=String(w||"").match(/[a-zA-Z][a-zA-Z'’.\-]*/); return m? m[0].toLowerCase() : ""; };
+// the English portion to speak aloud (drops Korean/placeholder text)
+const enSpeak=w=>String(w||"").replace(/[^\x00-\x7f]+/g," ").replace(/\s+/g," ").trim();
+// fetch IPA + audio for an English word. caches by the word (incl. "not found").
 async function fetchPhon(word){
-  const key=phonKey(word);
-  if(!key || !/^[a-z][a-z'’.\-\s]*$/i.test(word.trim())) return null; // english-ish only
-  if(key in PHON) return PHON[key];
-  const q = key.includes(" ") ? key.split(/\s+/)[0] : key; // phrase → first word
+  const q=enWord(word);
+  if(q.length<2) return null;
+  if(q in PHON) return PHON[q];
   try{
     const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),6000);
     const r=await fetch("https://api.dictionaryapi.dev/api/v2/entries/en/"+encodeURIComponent(q),{signal:ctrl.signal});
     clearTimeout(t);
-    if(!r.ok){ PHON[key]=null; savePhon(); return null; }        // e.g. 404 not found
+    if(!r.ok){ PHON[q]=null; savePhon(); return null; }        // e.g. 404 not found
     const j=await r.json(); const e=(j&&j[0])||{};
     let ipa=(e.phonetic||"").trim(), audio="";
     for(const p of (e.phonetics||[])){ if(!ipa && p.text) ipa=String(p.text).trim(); if(!audio && p.audio) audio=p.audio; }
     if(audio.startsWith("//")) audio="https:"+audio;
     const val = ipa ? { ipa, audio } : null;
-    PHON[key]=val; savePhon(); return val;
+    PHON[q]=val; savePhon(); return val;
   }catch(err){ return null; } // network/abort → don't cache, allow retry later
 }
 /* IPA -> 대략적인 한글 발음(읽기 보조, 완벽하진 않음) */
@@ -1455,9 +1457,11 @@ async function fillPhon(word){
     slot.innerHTML=(kr?`<span class="phon-kr">${kr}</span>`:``)
       +(ipa?`<span class="phon-ipa mono">${ipa}</span>`:``)
       +`<button class="phon-say" title="발음 듣기" aria-label="발음 듣기">🔊</button>`;
-    const b=slot.querySelector(".phon-say"); if(b) b.onclick=ev=>{ ev.stopPropagation(); speakWord(word, v&&v.audio); };
+    const b=slot.querySelector(".phon-say"); if(b) b.onclick=ev=>{ ev.stopPropagation(); speakWord(enSpeak(word)||word, v&&v.audio); };
   };
-  const cached=PHON[phonKey(word)];
+  const en=enWord(word);
+  if(!en){ const s=$("#phonSlot"); if(s) s.innerHTML=""; return; } // no english → nothing to show
+  const cached=PHON[en];
   paint(cached);                          // 🔊 shows instantly (+IPA if cached)
   if(cached===undefined){ const v=await fetchPhon(word); paint(v); }  // fill IPA when it arrives
 }
