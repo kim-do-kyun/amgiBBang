@@ -1383,31 +1383,41 @@ function imageTextToVocab(text){
   return items;
 }
 
-/* ================= 발음(IPA) — free dictionary API + audio ================= */
-// per-device cache (not synced; deterministic per word, re-fetched elsewhere).
+/* ================= 발음 — Datamuse(ARPABET) → IPA → 한글 ================= */
+// Datamuse는 안정적·무키·CORS. per-device 캐시(동기화 불필요, 다른 기기서 재요청).
 let PHON={};
 try{ PHON=JSON.parse(localStorage.getItem("amgi.phon")||"{}")||{}; }catch(e){ PHON={}; }
 function savePhon(){ try{ localStorage.setItem("amgi.phon",JSON.stringify(PHON)); }catch(e){} }
-// first English word in an entry (handles phrases + mixed "eligible for 명사" → eligible)
 const enWord=w=>{ const m=String(w||"").match(/[a-zA-Z][a-zA-Z'’.\-]*/); return m? m[0].toLowerCase() : ""; };
-// the English portion to speak aloud (drops Korean/placeholder text)
 const enSpeak=w=>String(w||"").replace(/[^\x00-\x7f]+/g," ").replace(/\s+/g," ").trim();
-// fetch IPA + audio for an English word. caches by the word (incl. "not found").
+// ARPABET(음소, 강세숫자 포함) → IPA
+const ARPA_IPA={ AA:"ɑ",AE:"æ",AH:"ʌ",AO:"ɔ",AW:"aʊ",AY:"aɪ",EH:"ɛ",ER:"ɜ",EY:"eɪ",IH:"ɪ",IY:"i",
+  OW:"oʊ",OY:"ɔɪ",UH:"ʊ",UW:"u",B:"b",CH:"tʃ",D:"d",DH:"ð",F:"f",G:"g",HH:"h",JH:"dʒ",K:"k",
+  L:"l",M:"m",N:"n",NG:"ŋ",P:"p",R:"ɹ",S:"s",SH:"ʃ",T:"t",TH:"θ",V:"v",W:"w",Y:"j",Z:"z",ZH:"ʒ" };
+function arpaToIpa(arpa){
+  return String(arpa).trim().split(/\s+/).map(ph=>{
+    const base=ph.replace(/[0-2]$/,""), st=(ph.match(/([0-2])$/)||[])[1];
+    if(base==="AH" && st==="0") return "ə";
+    return ARPA_IPA[base]||"";
+  }).join("");
+}
+// fetch IPA for an English word via Datamuse. caches by the word (incl. "not found").
 async function fetchPhon(word){
   const q=enWord(word);
   if(q.length<2) return null;
   if(q in PHON) return PHON[q];
   try{
     const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),6000);
-    const r=await fetch("https://api.dictionaryapi.dev/api/v2/entries/en/"+encodeURIComponent(q),{signal:ctrl.signal});
+    const r=await fetch("https://api.datamuse.com/words?md=r&max=1&sp="+encodeURIComponent(q),{signal:ctrl.signal});
     clearTimeout(t);
-    if(!r.ok){ PHON[q]=null; savePhon(); return null; }        // e.g. 404 not found
-    const j=await r.json(); const e=(j&&j[0])||{};
-    let ipa=(e.phonetic||"").trim(), audio="";
-    for(const p of (e.phonetics||[])){ if(!ipa && p.text) ipa=String(p.text).trim(); if(!audio && p.audio) audio=p.audio; }
-    if(audio.startsWith("//")) audio="https:"+audio;
-    const val = ipa ? { ipa, audio } : null;
-    PHON[q]=val; savePhon(); return val;
+    if(!r.ok) return null;                                   // transient → don't cache
+    const j=await r.json();
+    const hit=(j && j[0] && j[0].word===q)? j[0] : null;
+    const tag=hit && (hit.tags||[]).find(x=>x.indexOf("pron:")===0);
+    const arpa=tag? tag.slice(5).trim() : "";
+    const ipa=arpa? "/"+arpaToIpa(arpa)+"/" : "";
+    const val=ipa? { ipa } : null;
+    PHON[q]=val; savePhon(); return val;                     // cache found or "no pron"
   }catch(err){ return null; } // network/abort → don't cache, allow retry later
 }
 /* IPA -> 대략적인 한글 발음(읽기 보조, 완벽하진 않음) */
