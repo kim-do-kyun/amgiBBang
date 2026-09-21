@@ -184,6 +184,11 @@ input:focus,textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 
 .prompt-word{font-size:clamp(32px,6vw,54px);font-weight:900;letter-spacing:-.02em;line-height:1.15}
 .prompt-q{font-size:clamp(19px,3.2vw,25px);font-weight:700;letter-spacing:-.01em;line-height:1.4;max-width:38ch}
 .prompt-sub{margin-top:14px;color:var(--faint);font-size:13px;font-family:"JetBrains Mono",monospace;letter-spacing:.1em;text-transform:uppercase}
+.prompt-phon{display:flex;align-items:center;justify-content:center;gap:9px;margin-top:10px;min-height:30px}
+.phon-ipa{color:var(--muted);font-size:16px;letter-spacing:.01em}
+.phon-say{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;font-size:15px;line-height:1;background:var(--panel-2);border:1px solid var(--line);color:var(--muted);cursor:pointer}
+.phon-say:hover{border-color:var(--accent);color:var(--accent-ink)}
+.phon-say:active{transform:translateY(1px)}
 .p-choices{padding:8px 20px 10px;display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:720px;margin:0 auto;width:100%}
 .p-choices.stack{grid-template-columns:1fr}
 .choice{display:flex;align-items:center;gap:14px;text-align:left;background:var(--panel);border:1px solid var(--line-2);border-radius:14px;padding:16px 18px;font-size:15px;font-weight:600;line-height:1.35;transition:border-color .12s,background .12s,transform .06s;box-shadow:var(--shadow)}
@@ -1377,6 +1382,49 @@ function imageTextToVocab(text){
   return items;
 }
 
+/* ================= 발음(IPA) — free dictionary API + audio ================= */
+// per-device cache (not synced; deterministic per word, re-fetched elsewhere).
+let PHON={};
+try{ PHON=JSON.parse(localStorage.getItem("amgi.phon")||"{}")||{}; }catch(e){ PHON={}; }
+function savePhon(){ try{ localStorage.setItem("amgi.phon",JSON.stringify(PHON)); }catch(e){} }
+const phonKey=w=>String(w||"").trim().toLowerCase();
+// fetch IPA + audio for an English word (single word most reliable). caches result (incl. "not found").
+async function fetchPhon(word){
+  const key=phonKey(word);
+  if(!key || !/^[a-z][a-z'’.\-\s]*$/i.test(word.trim())) return null; // english-ish only
+  if(key in PHON) return PHON[key];
+  const q = key.includes(" ") ? key.split(/\s+/)[0] : key; // phrase → first word
+  try{
+    const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),6000);
+    const r=await fetch("https://api.dictionaryapi.dev/api/v2/entries/en/"+encodeURIComponent(q),{signal:ctrl.signal});
+    clearTimeout(t);
+    if(!r.ok){ PHON[key]=null; savePhon(); return null; }        // e.g. 404 not found
+    const j=await r.json(); const e=(j&&j[0])||{};
+    let ipa=(e.phonetic||"").trim(), audio="";
+    for(const p of (e.phonetics||[])){ if(!ipa && p.text) ipa=String(p.text).trim(); if(!audio && p.audio) audio=p.audio; }
+    if(audio.startsWith("//")) audio="https:"+audio;
+    const val = ipa ? { ipa, audio } : null;
+    PHON[key]=val; savePhon(); return val;
+  }catch(err){ return null; } // network/abort → don't cache, allow retry later
+}
+function speakWord(word, audioUrl){
+  if(audioUrl){ try{ new Audio(audioUrl).play(); return; }catch(e){} }
+  try{ if(window.speechSynthesis){ const u=new SpeechSynthesisUtterance(word); u.lang="en-US"; speechSynthesis.cancel(); speechSynthesis.speak(u); } }catch(e){}
+}
+// populate #phonSlot: 🔊 always (device TTS), IPA text when the dictionary has it
+async function fillPhon(word){
+  const paint=(v)=>{
+    const slot=$("#phonSlot"); if(!slot) return;
+    const ipa=v&&v.ipa? esc(v.ipa) : "";
+    slot.innerHTML=(ipa?`<span class="phon-ipa mono">${ipa}</span>`:``)
+      +`<button class="phon-say" title="발음 듣기" aria-label="발음 듣기">🔊</button>`;
+    const b=slot.querySelector(".phon-say"); if(b) b.onclick=ev=>{ ev.stopPropagation(); speakWord(word, v&&v.audio); };
+  };
+  const cached=PHON[phonKey(word)];
+  paint(cached);                          // 🔊 shows instantly (+IPA if cached)
+  if(cached===undefined){ const v=await fetchPhon(word); paint(v); }  // fill IPA when it arrives
+}
+
 /* ================= START MODAL ================= */
 let startOpts={mode:"all", dir:"qa", shuffle:true, count:0};
 function startModal(deckId){
@@ -1491,6 +1539,7 @@ function renderQuestion(){
     correctIdx = opts.indexOf(answer);
     choices=opts;
     promptHTML=`<div class="prompt-word">${esc(prompt)}</div>
+      ${askWord?'<div class="prompt-phon" id="phonSlot"></div>':''}
       <div class="prompt-sub">${askWord?"알맞은 뜻은?":"알맞은 단어는?"}</div>`;
   } else {
     const order = Q.shufChoices!==false ? shuffle(item.choices.map((c,i)=>i)) : item.choices.map((c,i)=>i);
@@ -1520,6 +1569,7 @@ function renderQuestion(){
   $("#choices").addEventListener("click",e=>{const b=e.target.closest("[data-c]");if(b)answer(+b.dataset.c);});
   $("#dunno").onclick=()=>answer(-1);
   $("#starBtn").onclick=toggleFav;
+  if(isV && dir==="qa") fillPhon(item.q); // dictionary pronunciation under the word
 }
 function toggleFav(){
   const {deck,curOrigIdx}=Q; deck.fav=deck.fav||[];
