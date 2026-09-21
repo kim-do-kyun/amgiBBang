@@ -184,8 +184,9 @@ input:focus,textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 
 .prompt-word{font-size:clamp(32px,6vw,54px);font-weight:900;letter-spacing:-.02em;line-height:1.15}
 .prompt-q{font-size:clamp(19px,3.2vw,25px);font-weight:700;letter-spacing:-.01em;line-height:1.4;max-width:38ch}
 .prompt-sub{margin-top:14px;color:var(--faint);font-size:13px;font-family:"JetBrains Mono",monospace;letter-spacing:.1em;text-transform:uppercase}
-.prompt-phon{display:flex;align-items:center;justify-content:center;gap:9px;margin-top:10px;min-height:30px}
-.phon-ipa{color:var(--muted);font-size:16px;letter-spacing:.01em}
+.prompt-phon{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;margin-top:10px;min-height:30px}
+.phon-kr{color:var(--accent-ink);font-size:16px;font-weight:700}
+.phon-ipa{color:var(--faint);font-size:14px;letter-spacing:.01em}
 .phon-say{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;font-size:15px;line-height:1;background:var(--panel-2);border:1px solid var(--line);color:var(--muted);cursor:pointer}
 .phon-say:hover{border-color:var(--accent);color:var(--accent-ink)}
 .phon-say:active{transform:translateY(1px)}
@@ -1407,6 +1408,40 @@ async function fetchPhon(word){
     PHON[key]=val; savePhon(); return val;
   }catch(err){ return null; } // network/abort → don't cache, allow retry later
 }
+/* IPA -> 대략적인 한글 발음(읽기 보조, 완벽하진 않음) */
+const KCHO=["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
+const KJUNG=["ㅏ","ㅐ","ㅑ","ㅒ","ㅓ","ㅔ","ㅕ","ㅖ","ㅗ","ㅘ","ㅙ","ㅚ","ㅛ","ㅜ","ㅝ","ㅞ","ㅟ","ㅠ","ㅡ","ㅢ","ㅣ"];
+const KJONG=["","ㄱ","ㄲ","ㄳ","ㄴ","ㄵ","ㄶ","ㄷ","ㄹ","ㄺ","ㄻ","ㄼ","ㄽ","ㄾ","ㄿ","ㅀ","ㅁ","ㅂ","ㅄ","ㅅ","ㅆ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
+function kcompose(cho,jung,jong){ const ci=KCHO.indexOf(cho||"ㅇ"),ji=KJUNG.indexOf(jung),ki=jong?KJONG.indexOf(jong):0; if(ci<0||ji<0)return ""; return String.fromCharCode(0xAC00+(ci*21+ji)*28+(ki<0?0:ki)); }
+const KVOW={ "i":"ㅣ","ɪ":"ㅣ","e":"ㅔ","ɛ":"ㅔ","æ":"ㅐ","a":"ㅏ","ɑ":"ㅏ","ɒ":"ㅗ","ʌ":"ㅓ","ə":"ㅓ","ɜ":"ㅓ","ɝ":"ㅓ","ɚ":"ㅓ","ɔ":"ㅗ","o":"ㅗ","u":"ㅜ","ʊ":"ㅜ","ᵻ":"ㅣ","ɐ":"ㅓ" };
+const KDIPH={ "eɪ":["ㅔ","ㅣ"],"aɪ":["ㅏ","ㅣ"],"aʊ":["ㅏ","ㅜ"],"ɔɪ":["ㅗ","ㅣ"],"oʊ":["ㅗ"],"əʊ":["ㅗ"],"ɪə":["ㅣ","ㅓ"],"eə":["ㅔ","ㅓ"],"ʊə":["ㅜ","ㅓ"],"juː":["ㅠ"],"ju":["ㅠ"],"jʊ":["ㅠ"] };
+const KINI={ "p":"ㅍ","b":"ㅂ","t":"ㅌ","d":"ㄷ","k":"ㅋ","g":"ㄱ","f":"ㅍ","v":"ㅂ","θ":"ㅅ","ð":"ㄷ","s":"ㅅ","z":"ㅈ","ʃ":"ㅅ","ʒ":"ㅈ","tʃ":"ㅊ","dʒ":"ㅈ","m":"ㅁ","n":"ㄴ","ŋ":"ㅇ","l":"ㄹ","r":"ㄹ","ɹ":"ㄹ","h":"ㅎ","j":"ㅇ","w":"ㅇ","x":"ㅎ" };
+const KBAT={ "m":"ㅁ","n":"ㄴ","ŋ":"ㅇ","l":"ㄹ" };
+const KFIN={ "p":"프","b":"브","t":"트","d":"드","k":"크","g":"그","f":"프","v":"브","θ":"스","ð":"드","s":"스","z":"즈","ʃ":"시","ʒ":"지","tʃ":"치","dʒ":"지","r":"르","ɹ":"르","h":"흐" };
+function ipaToHangul(ipa){
+  if(!ipa) return "";
+  const s=String(ipa).replace(/[\/\[\]().ˈˌˑ‿ '’-]/g,"").replace(/ː/g,"").replace(/ʰ/g,"");
+  const multi=["tʃ","dʒ","juː","ju","jʊ","eɪ","aɪ","aʊ","ɔɪ","oʊ","əʊ","ɪə","eə","ʊə"];
+  const toks=[]; for(let i=0;i<s.length;){ const m=multi.find(x=>s.startsWith(x,i)); if(m){toks.push(m);i+=m.length;} else {toks.push(s[i]);i++;} }
+  const isV=t=> (t in KVOW)||(t in KDIPH), meds=t=> (t in KDIPH)?KDIPH[t]:[KVOW[t]];
+  const tk=toks.filter(t=> isV(t)||(t in KINI)||(t in KBAT));
+  const syl=[]; let cur=null; const push=()=>{ if(cur){syl.push(cur);cur=null;} };
+  for(let i=0;i<tk.length;i++){
+    const t=tk[i];
+    if(isV(t)){ for(const m of meds(t)){ if(cur&&cur.med==null)cur.med=m; else {push();cur={ini:"ㅇ",med:m,jong:""};} } continue; }
+    const nextIsV = i+1<tk.length && isV(tk[i+1]);
+    if(nextIsV){ if(cur&&cur.med==null){cur.med="ㅡ";push();} else push(); cur={ini:KINI[t],med:null,jong:""}; }
+    else{
+      const nx=tk[i+1];
+      if(cur&&cur.med!=null&&cur.jong===""&&(t in KBAT)){ cur.jong=KBAT[t]; }
+      else if(!(t in KBAT)&&nx&&(nx in KBAT)&&(i+2>=tk.length||!isV(tk[i+2]))){ if(cur&&cur.med==null){cur.med="ㅡ";push();}else push(); syl.push({raw:kcompose(KINI[t],"ㅡ",KBAT[nx])}); i++; }
+      else if(t in KBAT){ if(cur&&cur.med==null){cur.med="ㅡ";push();}else push(); syl.push({ini:KINI[t],med:"ㅡ",jong:""}); }
+      else{ if(cur&&cur.med==null){cur.med="ㅡ";push();}else push(); syl.push({raw:KFIN[t]||kcompose(KINI[t],"ㅡ")}); }
+    }
+  }
+  if(cur&&cur.med==null)cur.med="ㅡ"; push();
+  return syl.map(x=> x.raw!=null?x.raw:kcompose(x.ini,x.med,x.jong)).join("");
+}
 function speakWord(word, audioUrl){
   if(audioUrl){ try{ new Audio(audioUrl).play(); return; }catch(e){} }
   try{ if(window.speechSynthesis){ const u=new SpeechSynthesisUtterance(word); u.lang="en-US"; speechSynthesis.cancel(); speechSynthesis.speak(u); } }catch(e){}
@@ -1416,7 +1451,9 @@ async function fillPhon(word){
   const paint=(v)=>{
     const slot=$("#phonSlot"); if(!slot) return;
     const ipa=v&&v.ipa? esc(v.ipa) : "";
-    slot.innerHTML=(ipa?`<span class="phon-ipa mono">${ipa}</span>`:``)
+    const kr=v&&v.ipa? esc(ipaToHangul(v.ipa)) : "";
+    slot.innerHTML=(kr?`<span class="phon-kr">${kr}</span>`:``)
+      +(ipa?`<span class="phon-ipa mono">${ipa}</span>`:``)
       +`<button class="phon-say" title="발음 듣기" aria-label="발음 듣기">🔊</button>`;
     const b=slot.querySelector(".phon-say"); if(b) b.onclick=ev=>{ ev.stopPropagation(); speakWord(word, v&&v.audio); };
   };
